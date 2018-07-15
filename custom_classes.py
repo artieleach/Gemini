@@ -127,15 +127,15 @@ class Player:
             'Int': roll_dice('4d6d1'),
             'Wil': roll_dice('4d6d1'),
             'Per': roll_dice('4d6d1'),
-            'HP': 64,
+            'HP': 8,
             'FP': 0,
             'XP': 0
         }
         self.inventory = [book, redbottle, greataxe]
-        self.appearance = [tile_set[1368]]
+        self.appearance = tile_set[1767]
         self.equipped = []
-        self.x = 28
-        self.y = 38
+        self.x = 26
+        self.y = 71
 
     @staticmethod
     def get_bag(bag, is_list=True):
@@ -173,6 +173,7 @@ class Actor:
                         self.y, self.x = path[-1]
                         raw_maps[current_map]['Mid'][self.y, self.x] = self.sprite
                         raw_maps[current_map]['Collision'][self.y, self.x] = -1
+                        print(self.x, self.y)
             else:
                 raw_maps[current_map]['Collision'][self.y, self.x] = raw_maps[current_map]['Collision Copy'][self.y, self.x]
                 raw_maps[current_map]['Mid'][self.y, self.x] = self.sprite

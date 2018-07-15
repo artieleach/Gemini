@@ -7,14 +7,14 @@ class GameTest(arcade.Window):
         super().__init__(width, height)
         self.grid = np.zeros(wh, dtype=int)
         self.pressed_keys = self.pressed_keys  # i don't know why i need this, but pycharm wants it.
-        self.state = 'Walking'  # three possible states, walking talking and inventory.
+        self.state = 'Walking'  # walking, talking, and inventory.
         self.selected = False  # true if an item/option is selected
         self.cur_opt = [0, 0, 0]  # X, Y, starting Index
         self.inventory_screen = 0  # 0=inv, 1=eqp, 2=stats, 3=opt
         self.cur_text = None
         self.cur_item = None
         self.p = Player()
-        self.actor1 = Actor(yx=(29, 25), sprite=908, disposition=2, target=(self.p.y, self.p.x))
+        self.actor1 = Actor(yx=(26, 70), sprite=908, disposition=2, target=(self.p.y, self.p.x))
         self.actor_list = []
         self.actor_list.append(self.actor1)
 
@@ -29,9 +29,9 @@ class GameTest(arcade.Window):
                 self.draw_map(raw_maps[current_map]['Fore'], row, col)
                 if self.state == 'Talking':
                     if self.cur_text.speaker:
-                        raw_maps['dialog'][3] = [i for s in [[-1], [1564], [1565] * ((len(self.cur_text.speaker)) // 2 - 1), [1567], [-1] * 15] for i in s][:16]
+                        raw_maps['dialog'][3] = [i for s in [[0], [1563], [1564] * ((len(self.cur_text.speaker)) // 2 - 1), [1565], [-1] * 15] for i in s][:16]
                     else:
-                        raw_maps['dialog'][3] = [-1] * 16
+                        raw_maps['dialog'][3] = [0] * 16
                 if self.state is 'Inventory':
                     self.gen_tile(raw_maps['inventory'][self.inventory_screen], r_c=(row, col - 1), yx=(0.5, 0.5))
         if self.state is 'Talking':
@@ -41,14 +41,9 @@ class GameTest(arcade.Window):
             self.gen_text(txt=self.cur_text.text, speaker=self.cur_text.speaker, opts=self.cur_text.dialog_opts)
         if self.state is 'Inventory':
             self.gen_inv()
-        cur_health = self.gen_health()
-        for row in range(4):
-            pass
-            #  self.gen_tile([cur_health[row]], r_c=(row, 8), yx=(0.75, 0.5))
-            #  self.gen_tile([health_bar[row]], r_c=(row, 8), yx=(0.75, 0.5))
-
-    def gen_health(self):
-        return [i for s in [[2482] * (self.p.stats['HP'] // 16), [2498 - self.p.stats['HP'] % 16], [-1] * 4] for i in s][:4]
+        cur_health = [item for sublist in [[1745]*(self.p.stats['HP'] // 2), [1746]*(self.p.stats['HP'] % 2 == 1)] for item in sublist]
+        for row in range(-(-self.p.stats['HP'] // 2)):
+            self.gen_tile([cur_health[row]], (0.5+row, 8.5))
 
     def cursor(self, list_locs):
         try:
@@ -61,21 +56,21 @@ class GameTest(arcade.Window):
     def gen_text(self, txt=None, speaker=None, opts=None, yx=(2.5, 2)):
         y, x = yx
         if speaker:
-            for char in range(len(speaker)):
-                arcade.draw_texture_rectangle((char+3) * FONT_WIDTH, 224, 64, 64, font[ord(speaker[char])])
+            for my_pos, char in enumerate(speaker):
+                arcade.draw_texture_rectangle((my_pos+3) * FONT_WIDTH, 224, 64, 64, font[ord(char)])
         if opts:
             cursor_locs = np.zeros((len(opts), len(opts[0]), 2), dtype=int)
-            for item in range(len(opts)):
-                for sub in range(len(opts[item])):
-                    cursor_locs[item, sub] = [x + len(''.join(opts[item][:sub])),  y-item-int(txt is not None)]
-                    out = ''.join(opts[item])
-                    for char in range(len(out)):
-                        arcade.draw_texture_rectangle((char+x) * FONT_WIDTH, (y-item-int(txt is not None))*64, 64, 64, font[ord(out[char])])
+            for itempos, item in enumerate(opts):
+                for optpos, sub in enumerate(item):
+                    cursor_locs[itempos, optpos] = [x + len(''.join(opts[itempos][:optpos])), y - itempos - int(txt is not None)]
+                    out = ''.join(opts[itempos])
+                    for charpos, char in enumerate(out):
+                        arcade.draw_texture_rectangle((charpos + x) * FONT_WIDTH, (y - itempos - int(txt is not None)) * 64, 64, 64, font[ord(char)])
             self.cursor(cursor_locs)
         if txt:
-            for line in range(len(txt[self.cur_opt[2]:self.cur_opt[2]+3])):
-                for char in range(len(txt[line+self.cur_opt[2]])):
-                    arcade.draw_texture_rectangle((char + x) * FONT_WIDTH, ((y - line) * 64), 64, 64, font[ord(txt[line+self.cur_opt[2]][char])])
+            for linepos, line in enumerate(txt[self.cur_opt[2]:self.cur_opt[2] + 3]):
+                for charpos, char in enumerate(txt[linepos + self.cur_opt[2]]):
+                    arcade.draw_texture_rectangle((charpos + x) * FONT_WIDTH, ((y - linepos) * 64), 64, 64, font[ord(char)])
 
     def gen_inv(self):
         self.draw_p((5, 13))
@@ -108,9 +103,9 @@ class GameTest(arcade.Window):
             self.gen_text(opts=([' Options'], [' Settings'], [' Exit']), yx=(6.5, 13))
 
     def gen_sub_menu(self):
-        for row in range(len(raw_maps['submenu'])):
-            for col in range(len(raw_maps['submenu'][row])):
-                self.gen_tile(raw_maps['submenu'], (row, col), yx=(11, 2.5))
+        for x, row in enumerate(raw_maps['submenu']):
+            for y, col in enumerate(row):
+                self.gen_tile(raw_maps['submenu'], (x, y), yx=(11, 2.5))
         self.gen_text(opts=self.cur_item.get_actions(), yx=(5.5, 18))
     
     def draw_map(self, inmap, row, col):
@@ -211,7 +206,6 @@ class GameTest(arcade.Window):
             self.p.stats['HP'] += 1
         if key == arcade.key.N:
             self.p.stats['HP'] -= 1
-            print(self.p.stats['HP'])
 
     def update(self, delta_time: float):
         if self.state is 'Walking':
@@ -285,10 +279,7 @@ class GameTest(arcade.Window):
 
     def draw_p(self, yx=(0, 0)):
         y, x = yx
-        for b in self.p.appearance:
-            arcade.draw_texture_rectangle(y * 32, x * 32, WIDTH, HEIGHT, b)
-        for c in self.p.equipped:
-            arcade.draw_texture_rectangle(y * 32, x * 32, WIDTH, HEIGHT, tile_set[c.texture])
+        arcade.draw_texture_rectangle(y * 32, x * 32, WIDTH, HEIGHT, self.p.appearance)
 
 
 def main():
