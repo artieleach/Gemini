@@ -1,5 +1,3 @@
-import textwrap
-import random
 import arcade
 import numpy as np
 import heapq
@@ -8,8 +6,7 @@ import os
 from items import *
 from PIL import Image
 
-
-wait_time = 0.02
+wait_time = 0.01
 
 rc = ROWS, COLS = (9, 16)
 wh = WIDTH, HEIGHT = (64, 64)
@@ -22,25 +19,25 @@ loc_array = {}
 map_dir = [f for f in os.listdir('./Maps') if os.path.isfile(os.path.join('./Maps', f))]
 img_dir = [f for f in os.listdir('./Images') if os.path.isfile(os.path.join('./Images', f))]
 
-for file in map_dir:
-    cur_map = tmx.TileMap.load('./Maps/{}'.format(file))
+for file in map_dir:  # Some maps, mainly Mid and Collision, need copies, and i figure having backups cant hurt
+    map_file = tmx.TileMap.load('./Maps/{}'.format(file))
     file_name = file.split('.')[0]
     raw_maps[file_name] = {}
-    for layer in cur_map.layers:
+    for layer in map_file.layers:
         map_data = []
         for tile in layer.tiles:
             if tile.gid != 0:
                 map_data.append(tile.gid-1)
             else:
                 map_data.append(-1)
-        if len(cur_map.layers) > 1:
+        if len(map_file.layers) > 1:
             try:
-                raw_maps[file_name][int(layer.name)] = np.flip(np.array(map_data, dtype=int).reshape((cur_map.height, cur_map.width)), 0)
+                raw_maps[file_name][int(layer.name)] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
             except ValueError:
-                raw_maps[file_name][layer.name] = np.flip(np.array(map_data, dtype=int).reshape((cur_map.height, cur_map.width)), 0)
-                raw_maps[file_name]['{} Copy'.format(layer.name)] = raw_maps[file_name][layer.name][:]
+                raw_maps[file_name][layer.name] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
+                raw_maps[file_name]['{} Copy'.format(layer.name)] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
         else:
-            raw_maps[file_name] = np.flip(np.array(map_data, dtype=int).reshape((cur_map.height, cur_map.width)), 0)
+            raw_maps[file_name] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
 
 for file in img_dir:
     file_name = file.split('.')[0]
@@ -114,8 +111,8 @@ def astar(start, goal, array=raw_maps[current_map]['Collision']):
 
 def roll_dice(s='1d'):
     d = list(map(int, s.split('d')))
-    return int(s != '1d') * sum(sorted(list(random.randint(1, d[1])
-                                            for _ in range(d[0])))[d[-1] * (len(d) > 2):]) or random.randint(0, 1)
+    return int(s != '1d') * sum(sorted(list(np.random.randint(1, d[1])
+                                            for _ in range(d[0])))[d[-1] * (len(d) > 2):]) or np.random.randint(0, 1)
 
 
 class Player:
@@ -155,55 +152,35 @@ class Player:
 
 
 class Actor:
-    def __init__(self, yx, target, sprite, disposition):
+    def __init__(self, yx, sprite, disposition):
         self.y, self.x = yx
-        self.target = target
         self.sprite = sprite
         self.disposition = disposition  # 0 = Neutral, 1 = Aggressive, 2 = Friendly
 
     def move_me(self, goal, pathfind=True):
         if pathfind:
-            global raw_maps, current_map
-            if self.disposition > 0:
+            if self.disposition == 'Friendly':
                 path = astar((self.y, self.x), goal, raw_maps[current_map]['Collision'])
                 if type(path) is list:
-                    if len(path) > 1 + self.disposition - 1:
+                    if len(path) > 2:
                         raw_maps[current_map]['Mid'][self.y, self.x] = raw_maps[current_map]['Mid Copy'][self.y, self.x]
                         raw_maps[current_map]['Collision'][self.y, self.x] = raw_maps[current_map]['Collision Copy'][self.y, self.x]
                         self.y, self.x = path[-1]
                         raw_maps[current_map]['Mid'][self.y, self.x] = self.sprite
-                        raw_maps[current_map]['Collision'][self.y, self.x] = -1
-                        print(self.x, self.y)
-            else:
-                raw_maps[current_map]['Collision'][self.y, self.x] = raw_maps[current_map]['Collision Copy'][self.y, self.x]
-                raw_maps[current_map]['Mid'][self.y, self.x] = self.sprite
+                        raw_maps[current_map]['Collision'][self.y, self.x] = 69420
+            elif self.disposition == 'Aggressive':
+                path = astar((self.y, self.x), goal, raw_maps[current_map]['Collision'])
+                if type(path) is list:
+                    if len(path) > 1:
+                        raw_maps[current_map]['Mid'][self.y, self.x] = raw_maps[current_map]['Mid Copy'][self.y, self.x]
+                        raw_maps[current_map]['Collision'][self.y, self.x] = raw_maps[current_map]['Collision Copy'][self.y, self.x]
+                        self.y, self.x = path[-1]
+                        raw_maps[current_map]['Mid'][self.y, self.x] = self.sprite
+                        raw_maps[current_map]['Collision'][self.y, self.x] = 1
         else:
             raw_maps[current_map]['Mid'][self.y, self.x] = raw_maps[current_map]['Mid Copy'][self.y, self.x]
             raw_maps[current_map]['Collision'][self.y, self.x] = raw_maps[current_map]['Collision Copy'][self.y, self.x]
             self.y, self.x = goal
             raw_maps[current_map]['Mid'][self.y, self.x] = self.sprite
             raw_maps[current_map]['Collision'][self.y, self.x] = -1
-
-
-class DialogItem:
-    def __init__(self, text=None, speaker=None, dialog_opts=None):
-        self.speaker = speaker
-        if type(text) is str:
-            self.text = textwrap.wrap(text, 22)
-        else:
-            self.text = text
-        if type(dialog_opts) is list:
-            if type(dialog_opts[0]) is list:
-                self.dialog_opts = [[' {} '.format(opt) for opt in lin] for lin in dialog_opts]
-            else:
-                self.dialog_opts = [[' {} '.format(opt)] for opt in dialog_opts]
-        else:
-            self.dialog_opts = dialog_opts
-
-
-nodes = {
-    2: DialogItem(text='Anime makes you gay.', speaker='Your Mother'),
-    3: DialogItem(text="Steal the boat?", dialog_opts=([['Yes', 'Why?', 'Property is theft'],
-                                                        ['No', 'Steal half', 'Whose boat?']])),
-}
 

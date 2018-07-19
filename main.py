@@ -14,9 +14,11 @@ class GameTest(arcade.Window):
         self.cur_text = None
         self.cur_item = None
         self.p = Player()
-        self.actor1 = Actor(yx=(26, 70), sprite=908, disposition=2, target=(self.p.y, self.p.x))
-        self.actor_list = []
-        self.actor_list.append(self.actor1)
+        self.actor1 = Actor(yx=(70, 26), sprite=908, disposition='Friendly')
+        self.actor2 = Actor(yx=(71, 26), sprite=1780, disposition='Aggressive')
+        self.actor_list = [self.actor1, self.actor2]
+        self.actor_list = sorted(self.actor_list, key=lambda x: x.disposition)
+        print(self.actor_list)
 
     def on_draw(self):
         arcade.start_render()
@@ -29,9 +31,9 @@ class GameTest(arcade.Window):
                 self.draw_map(raw_maps[current_map]['Fore'], row, col)
                 if self.state == 'Talking':
                     if self.cur_text.speaker:
-                        raw_maps['dialog'][3] = [i for s in [[0], [1563], [1564] * ((len(self.cur_text.speaker)) // 2 - 1), [1565], [-1] * 15] for i in s][:16]
+                        raw_maps['dialog'][3] = [i for s in [[0], [1563], [1564] * ((len(self.cur_text.speaker)) // 2 + 1), [1565], [-1] * 15] for i in s][:16]
                     else:
-                        raw_maps['dialog'][3] = [0] * 16
+                        raw_maps['dialog'][3] = [-1] * 16
                 if self.state is 'Inventory':
                     self.gen_tile(raw_maps['inventory'][self.inventory_screen], r_c=(row, col - 1), yx=(0.5, 0.5))
         if self.state is 'Talking':
@@ -57,7 +59,7 @@ class GameTest(arcade.Window):
         y, x = yx
         if speaker:
             for my_pos, char in enumerate(speaker):
-                arcade.draw_texture_rectangle((my_pos+3) * FONT_WIDTH, 224, 64, 64, font[ord(char)])
+                arcade.draw_texture_rectangle((my_pos+2) * FONT_WIDTH, 224, 64, 64, font[ord(char)])
         if opts:
             cursor_locs = np.zeros((len(opts), len(opts[0]), 2), dtype=int)
             for itempos, item in enumerate(opts):
@@ -199,62 +201,35 @@ class GameTest(arcade.Window):
                 self.state = 'Walking'
             else:
                 self.close()
-        if key in movemnet_keys['Map']:
-            for act in self.actor_list:
-                act.move_me((self.p.y, self.p.x))
         if key == arcade.key.H:
             self.p.stats['HP'] += 1
         if key == arcade.key.N:
             self.p.stats['HP'] -= 1
+        if key == arcade.key.M:
+            print(raw_maps[current_map]['Collision'][self.p.y-2:self.p.y+3, self.p.x-2:self.p.x+3])
 
     def update(self, delta_time: float):
         if self.state is 'Walking':
             if any(key in movemnet_keys['Up'] for key in self.pressed_keys):
-                if raw_maps[current_map]['Collision'][self.p.y + 1, self.p.x] == 0:
+                if raw_maps[current_map]['Collision'][self.p.y + 1, self.p.x] == -1:
                     self.p.y += 1
-                    for act in self.actor_list:
-                        act.move_me((self.p.y, self.p.x))
-                elif raw_maps[current_map]['Collision'][self.p.y + 1, self.p.x] < 0:
-                    self.p.y += 1
-                    for act in self.actor_list:
-                        if act.x == self.p.x and act.y == self.p.y:
-                            act.move_me((act.y-1, act.x), False)
+                    self.game_step()
+                time.sleep(wait_time)
             if any(key in movemnet_keys['Down'] for key in self.pressed_keys):
-                if raw_maps[current_map]['Collision'][self.p.y - 1, self.p.x] == 0:
+                if raw_maps[current_map]['Collision'][self.p.y - 1, self.p.x] == -1:
                     self.p.y -= 1
-                    for act in self.actor_list:
-                        act.move_me((self.p.y, self.p.x))
-                    time.sleep(wait_time)
-                elif raw_maps[current_map]['Collision'][self.p.y - 1, self.p.x] < 0:
-                    self.p.y -= 1
-                    for act in self.actor_list:
-                        if act.x == self.p.x and act.y == self.p.y:
-                            act.move_me((act.y+1, act.x), False)
-                            time.sleep(wait_time)
+                    self.game_step()
+                time.sleep(wait_time)
             if any(key in movemnet_keys['Right'] for key in self.pressed_keys):
-                if raw_maps[current_map]['Collision'][self.p.y, self.p.x + 1] == 0:
+                if raw_maps[current_map]['Collision'][self.p.y, self.p.x + 1] == -1:
                     self.p.x += 1
-                    for act in self.actor_list:
-                        act.move_me((self.p.y, self.p.x))
-                    time.sleep(wait_time)
-                elif raw_maps[current_map]['Collision'][self.p.y, self.p.x + 1] < 0:
-                    self.p.x += 1
-                    for act in self.actor_list:
-                        if act.x == self.p.x and act.y == self.p.y:
-                            act.move_me((act.y, act.x-1), False)
-                            time.sleep(wait_time)
+                    self.game_step()
+                time.sleep(wait_time)
             if any(key in movemnet_keys['Left'] for key in self.pressed_keys):
-                if raw_maps[current_map]['Collision'][self.p.y, self.p.x - 1] == 0:
+                if raw_maps[current_map]['Collision'][self.p.y, self.p.x - 1] == -1:
                     self.p.x -= 1
-                    for act in self.actor_list:
-                        act.move_me((self.p.y, self.p.x))
-                    time.sleep(wait_time)
-                elif raw_maps[current_map]['Collision'][self.p.y, self.p.x - 1] < 0:
-                    self.p.x -= 1
-                    for act in self.actor_list:
-                        if act.x == self.p.x and act.y == self.p.y:
-                            act.move_me((act.y, act.x+1), False)
-                            time.sleep(wait_time)
+                    self.game_step()
+                time.sleep(wait_time)
 
     def interact_item(self, item, action):
         if action == 'Equip':
@@ -268,18 +243,19 @@ class GameTest(arcade.Window):
                 self.p.equipped.remove(item)
                 self.p.inventory.append(item)
         elif action == 'Look':
-            self.cur_text = DialogItem(item.look())
+            self.cur_text = item.look()
             self.state = 'Talking'
         elif action == 'Drop':
             if item in self.p.inventory:
                 self.p.inventory.remove(item)
-            else:
-                self.p.equipped.remove(item)
-            # floor_map[self.p.y, self.p.x] = item
 
     def draw_p(self, yx=(0, 0)):
-        y, x = yx
-        arcade.draw_texture_rectangle(y * 32, x * 32, WIDTH, HEIGHT, self.p.appearance)
+        arcade.draw_texture_rectangle(yx[0] * 32, yx[1] * 32, WIDTH, HEIGHT, self.p.appearance)
+
+    def game_step(self):
+        for act in self.actor_list:
+            if act.disposition != 'Neutral':
+                act.move_me((self.p.y, self.p.x))
 
 
 def main():

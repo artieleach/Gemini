@@ -1,3 +1,6 @@
+import textwrap
+
+
 class Item:
     def __init__(self, name, cost, weight, texture, flavor_text=None):
         self.name = name
@@ -8,7 +11,7 @@ class Item:
         self.actions = ['Look', 'Drop']
 
     def look(self):
-        return self.flavor_text or ' '
+        return DialogItem(text=self.flavor_text, speaker=self.name)
 
     def get_actions(self):
         return [[' {} '.format(i)] for i in self.actions]
@@ -36,7 +39,7 @@ class Armor(EquipmentItem):
         return '   {} (+{})'.format(self.name, self.bonus)
 
     def look(self):
-        return '{} {} {} {}'.format(self.name, self.type, self.asfc, self.bonus)
+        return DialogItem(text='{} {} {}'.format(self.type, self.asfc, self.bonus), speaker=self.name)
 
 
 class Weapon(EquipmentItem):
@@ -53,7 +56,7 @@ class Weapon(EquipmentItem):
         return '   {} ({})'.format(self.name, self.damage)
 
     def look(self):
-        return '{} ({} - {}) {} {}-Handed, crit:{}'.format(self.name, self.damage, self.damage_style, self.weapon_type, 'Two'*bool(self.handed-1) or 'One', self.critical_multiplier)
+        return DialogItem(text='({} - {}) {} {}-Handed, crit:{}'.format(self.damage, self.damage_style, self.weapon_type, 'Two'*bool(self.handed-1) or 'One', self.critical_multiplier), speaker=self.name)
 
 
 class Gold:
@@ -77,6 +80,29 @@ class Gold:
 
     def __repr__(self):
         return '{}g {}s'.format(self.cost[0], self.cost[1])
+
+
+class DialogItem:
+    def __init__(self, text=None, speaker=None, dialog_opts=None):
+        self.speaker = speaker
+        if type(text) is str:
+            self.text = textwrap.wrap(text, 22)
+        else:
+            self.text = text
+        if type(dialog_opts) is list:
+            if type(dialog_opts[0]) is list:
+                self.dialog_opts = [[' {} '.format(opt) for opt in lin] for lin in dialog_opts]
+            else:
+                self.dialog_opts = [[' {} '.format(opt)] for opt in dialog_opts]
+        else:
+            self.dialog_opts = dialog_opts
+
+
+nodes = {
+    2: DialogItem(text='Anime makes you gay.', speaker='Your Mother'),
+    3: DialogItem(text="Steal the boat?", dialog_opts=([['Yes', 'Why?', 'Property is theft'],
+                                                        ['No', 'Steal half', 'Whose boat?']])),
+}
 
 
 scilla = Item(name='Scilla', cost=10, weight=0, texture=541, flavor_text='A lovely blue flower.')
