@@ -11,13 +11,19 @@ wait_time = 0.01
 rc = ROWS, COLS = (9, 16)
 wh = WIDTH, HEIGHT = (64, 64)
 sc = SCREEN_WIDTH, SCREEN_HEIGHT = (WIDTH * COLS, HEIGHT * ROWS)
-FONT_WIDTH = 5*8
 
 current_map = 'overworld'
 raw_maps = {}
 loc_array = {}
 map_dir = [f for f in os.listdir('./Maps') if os.path.isfile(os.path.join('./Maps', f))]
 img_dir = [f for f in os.listdir('./Images') if os.path.isfile(os.path.join('./Images', f))]
+char_width = {' ': 40, '!': 16, '"': 32, '#': 48, '$': 32, '%': 32, '&': 48, "'": 16, '(': 24, ')': 24, '*': 32, '+': 32, ',': 16, '-': 32, '.': 16, '/': 32,
+              '0': 32, '1': 32, '2': 32, '3': 32, '4': 32, '5': 32, '6': 32, '7': 32, '8': 32, '9': 32, ':': 16, ';': 16, '<':  32, '=': 32, '>': 32, '?': 32,
+              '@': 48, 'A': 32, 'B': 32, 'C': 32, 'D': 32, 'E': 32, 'F': 32, 'G': 32, 'H': 32, 'I': 32, 'J': 32, 'K': 32, 'L': 32, 'M': 48, 'N': 32, 'O': 32, 
+              'P': 32, 'Q': 32, 'R': 32, 'S': 32, 'T': 32, 'U': 32, 'V': 32, 'W': 48, 'X': 32, 'Y': 32, 'Z': 32, '[': 24, '\\': 32, ']': 24, '^': 32, '_': 32, 
+              '`': 8,  'a': 32, 'b': 32, 'c': 32, 'd': 32, 'e': 32, 'f': 32, 'g': 32, 'h': 32, 'i': 16, 'j': 32, 'k': 32, 'l': 32, 'm': 48, 'n': 32, 'o': 32,
+              'p': 32, 'q': 32, 'r': 32, 's': 32, 't': 32, 'u': 32, 'v': 32, 'w': 48, 'x': 32, 'y': 32, 'z': 32, '{': 32, '|': 16, '}': 32, '~': 32
+}
 
 for file in map_dir:  # Some maps, mainly Mid and Collision, need copies, and i figure having backups cant hurt
     map_file = tmx.TileMap.load('./Maps/{}'.format(file))
@@ -45,8 +51,8 @@ for file in img_dir:
     loc_array[file_name] = [[j, i, 64, 64] for i in range(0, cur_img.size[1], 64) for j in range(0, cur_img.size[0], 64)]
     cur_img.close()
 
-tile_set = arcade.draw_commands.load_textures('./Images/8x8Tile.png', loc_array['8x8Tile'])
-font = arcade.draw_commands.load_textures('./Images/8x8Font.png', loc_array['8x8Font'])
+tile_set = arcade.draw_commands.load_textures('./Images/Tile.png', loc_array['Tile'])
+font = arcade.draw_commands.load_textures('./Images/Font.png', loc_array['Font'])
 
 movemnet_keys = {
     'Up': (arcade.key.W, arcade.key.UP, arcade.key.NUM_8),
@@ -152,26 +158,25 @@ class Player:
 
 
 class Actor:
-    def __init__(self, yx, sprite, disposition):
+    def __init__(self, yx, sprite, disposition, target_distance):
         self.y, self.x = yx
         self.sprite = sprite
         self.disposition = disposition  # 0 = Neutral, 1 = Aggressive, 2 = Friendly
+        self.target_distance = target_distance
 
     def move_me(self, goal, pathfind=True):
         if pathfind:
-            if self.disposition == 'Friendly':
-                path = astar((self.y, self.x), goal, raw_maps[current_map]['Collision'])
-                if type(path) is list:
-                    if len(path) > 2:
+            path = astar((self.y, self.x), goal, raw_maps[current_map]['Collision'])
+            if path:
+                if self.disposition == 'Friendly':
+                    if len(path) > self.target_distance:
                         raw_maps[current_map]['Mid'][self.y, self.x] = raw_maps[current_map]['Mid Copy'][self.y, self.x]
                         raw_maps[current_map]['Collision'][self.y, self.x] = raw_maps[current_map]['Collision Copy'][self.y, self.x]
                         self.y, self.x = path[-1]
                         raw_maps[current_map]['Mid'][self.y, self.x] = self.sprite
-                        raw_maps[current_map]['Collision'][self.y, self.x] = 69420
-            elif self.disposition == 'Aggressive':
-                path = astar((self.y, self.x), goal, raw_maps[current_map]['Collision'])
-                if type(path) is list:
-                    if len(path) > 1:
+                        raw_maps[current_map]['Collision'][self.y, self.x] = 1
+                elif self.disposition == 'Aggressive':
+                    if len(path) > self.target_distance:
                         raw_maps[current_map]['Mid'][self.y, self.x] = raw_maps[current_map]['Mid Copy'][self.y, self.x]
                         raw_maps[current_map]['Collision'][self.y, self.x] = raw_maps[current_map]['Collision Copy'][self.y, self.x]
                         self.y, self.x = path[-1]

@@ -2,7 +2,7 @@ import time
 from custom_classes import *
 
 
-class GameTest(arcade.Window):
+class Game(arcade.Window):
     def __init__(self, width, height):
         super().__init__(width, height)
         self.grid = np.zeros(wh, dtype=int)
@@ -14,11 +14,9 @@ class GameTest(arcade.Window):
         self.cur_text = None
         self.cur_item = None
         self.p = Player()
-        self.actor1 = Actor(yx=(70, 26), sprite=908, disposition='Friendly')
-        self.actor2 = Actor(yx=(71, 26), sprite=1780, disposition='Aggressive')
-        self.actor_list = [self.actor1, self.actor2]
-        self.actor_list = sorted(self.actor_list, key=lambda x: x.disposition)
-        print(self.actor_list)
+        self.actor1 = Actor(yx=(70, 26), sprite=908, disposition='Friendly', target_distance=1)
+        self.actor2 = Actor(yx=(71, 26), sprite=1780, disposition='Aggressive', target_distance=1)
+        self.actor_list = [self.actor1]
 
     def on_draw(self):
         arcade.start_render()
@@ -35,7 +33,7 @@ class GameTest(arcade.Window):
                     else:
                         raw_maps['dialog'][3] = [-1] * 16
                 if self.state is 'Inventory':
-                    self.gen_tile(raw_maps['inventory'][self.inventory_screen], r_c=(row, col - 1), yx=(0.5, 0.5))
+                    self.gen_tile(raw_maps['inventory'][self.inventory_screen], r_c=(row, col - 1), yx=(0, 0))
         if self.state is 'Talking':
             for row in range(4):
                 for col in range(16):
@@ -44,8 +42,9 @@ class GameTest(arcade.Window):
         if self.state is 'Inventory':
             self.gen_inv()
         cur_health = [item for sublist in [[1745]*(self.p.stats['HP'] // 2), [1746]*(self.p.stats['HP'] % 2 == 1)] for item in sublist]
-        for row in range(-(-self.p.stats['HP'] // 2)):
-            self.gen_tile([cur_health[row]], (0.5+row, 8.5))
+        if self.state is 'Walking':
+            for row in range(-(-self.p.stats['HP'] // 2)):
+                self.gen_tile([cur_health[row]], (0.5+row, 8.5))
 
     def cursor(self, list_locs):
         try:
@@ -53,62 +52,60 @@ class GameTest(arcade.Window):
         except IndexError:
             self.cur_opt = [0, 0, 0]
         highlight = list_locs[self.cur_opt[1], self.cur_opt[0]]
-        arcade.draw_texture_rectangle(highlight[0] * FONT_WIDTH, highlight[1]*64+32, 64, 64, font[ord('>')])
+        arcade.draw_texture_rectangle(highlight[0] * WIDTH, highlight[1]*HEIGHT+32, WIDTH, HEIGHT, tile_set[1480])
 
-    def gen_text(self, txt=None, speaker=None, opts=None, yx=(2.5, 2)):
+    def gen_text(self, txt=None, speaker=None, opts=None, yx=(2, 1)):
         y, x = yx
         if speaker:
-            for my_pos, char in enumerate(speaker):
-                arcade.draw_texture_rectangle((my_pos+2) * FONT_WIDTH, 224, 64, 64, font[ord(char)])
+            width_sum = 0
+            for charpos, char in enumerate(speaker):
+                width_sum += char_width[speaker[charpos-1]]
+                arcade.draw_texture_rectangle(width_sum+40, 216, WIDTH, HEIGHT, font[ord(char)])
         if opts:
             cursor_locs = np.zeros((len(opts), len(opts[0]), 2), dtype=int)
             for itempos, item in enumerate(opts):
                 for optpos, sub in enumerate(item):
                     cursor_locs[itempos, optpos] = [x + len(''.join(opts[itempos][:optpos])), y - itempos - int(txt is not None)]
                     out = ''.join(opts[itempos])
+                    width_sum = 0
                     for charpos, char in enumerate(out):
-                        arcade.draw_texture_rectangle((charpos + x) * FONT_WIDTH, (y - itempos - int(txt is not None)) * 64, 64, 64, font[ord(char)])
+                        width_sum += char_width[out[charpos-1]]
+                        arcade.draw_texture_rectangle(width_sum + x * WIDTH, (y - itempos - int(txt is not None)) * HEIGHT, WIDTH, HEIGHT, font[ord(char)])
             self.cursor(cursor_locs)
         if txt:
             for linepos, line in enumerate(txt[self.cur_opt[2]:self.cur_opt[2] + 3]):
+                width_sum = 0
                 for charpos, char in enumerate(txt[linepos + self.cur_opt[2]]):
-                    arcade.draw_texture_rectangle((charpos + x) * FONT_WIDTH, ((y - linepos) * 64), 64, 64, font[ord(char)])
+                    width_sum += char_width[txt[linepos + self.cur_opt[2]][charpos-1]]
+                    arcade.draw_texture_rectangle(width_sum + (x * WIDTH), ((y - linepos) * HEIGHT), WIDTH, HEIGHT, font[ord(char)])
 
     def gen_inv(self):
-        self.draw_p((5, 13))
-        self.gen_text([['Wares Eqp Lvl Opt', 'Wrs Eqpd Lvl Opt',
-                        'Wrs Eqp Lvls Opt', 'Wrs Eqp Lvl Optn'][self.inventory_screen]], yx=(7.5, 9))
-        self.gen_text(txt=self.p.get_points(), yx=(3, 2))
-        self.gen_text(txt=['{:03d}'.format(self.p.stats['XP'])], yx=(5.5, 2.5))
         if self.inventory_screen == 0:
             for i in range(len(self.p.inventory[self.cur_opt[2]:self.cur_opt[2] + 6 or -1])):
-                try:
-                    self.gen_tile([self.p.inventory[i + self.cur_opt[2]].texture], yx=(6.5 - i, 6))
-                except IndexError:
-                    pass
+                self.gen_tile([self.p.inventory[i + self.cur_opt[2]].texture], yx=(6.5 - i, 2))
             if not self.selected:
-                self.gen_text(opts=self.p.get_bag(self.p.inventory)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 9))
+                self.gen_text(opts=self.p.get_bag(self.p.inventory)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 1))
             else:
-                self.gen_text(txt=self.p.get_bag(self.p.inventory, False)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 11))
+                self.gen_text(txt=self.p.get_bag(self.p.inventory, False)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 2))
                 self.gen_sub_menu()
         elif self.inventory_screen == 1:
             for i in range(len(self.p.equipped[self.cur_opt[2]:self.cur_opt[2] + 6 or -1])):
-                self.gen_tile([self.p.equipped[i + self.cur_opt[2]].texture], yx=(6.5 - i, 6))
+                self.gen_tile([self.p.equipped[i + self.cur_opt[2]].texture], yx=(6.5 - i, 2))
             if not self.selected:
-                self.gen_text(opts=self.p.equip_stats()[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 13))
+                self.gen_text(opts=self.p.equip_stats()[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 1))
             else:
-                self.gen_text(txt=self.p.get_bag(self.p.equipped, False)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 16))
+                self.gen_text(txt=self.p.get_bag(self.p.equipped, False)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 1))
                 self.gen_sub_menu()
         elif self.inventory_screen == 2:
-            self.gen_text(self.p.get_stats(), yx=(6.5, 13))
+            self.gen_text(self.p.get_stats(), yx=(6.5, 1))
         else:
-            self.gen_text(opts=([' Options'], [' Settings'], [' Exit']), yx=(6.5, 13))
+            self.gen_text(opts=([' Options'], [' Settings'], [' Exit']), yx=(6.5, 1))
 
     def gen_sub_menu(self):
         for x, row in enumerate(raw_maps['submenu']):
             for y, col in enumerate(row):
-                self.gen_tile(raw_maps['submenu'], (x, y), yx=(11, 2.5))
-        self.gen_text(opts=self.cur_item.get_actions(), yx=(5.5, 18))
+                self.gen_tile(raw_maps['submenu'], (x, y), yx=(10, 2.5))
+        self.gen_text(opts=self.cur_item.get_actions(), yx=(6, 11))
     
     def draw_map(self, inmap, row, col):
         arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT,
@@ -254,12 +251,20 @@ class GameTest(arcade.Window):
 
     def game_step(self):
         for act in self.actor_list:
-            if act.disposition != 'Neutral':
+            if act.disposition == 'Friendly':
+                enemy_list = [i for i in self.actor_list if i.disposition == 'Aggressive']
+                if enemy_list:
+                    act.target_distance = 1
+                    act.move_me((enemy_list[0].y, enemy_list[0].x))
+                else:
+                    act.target_distance = 2
+                    act.move_me((self.p.y, self.p.x))
+            elif act.disposition == 'Aggressive':
                 act.move_me((self.p.y, self.p.x))
 
 
 def main():
-    GameTest(*sc)
+    Game(*sc)
     arcade.run()
 
 
