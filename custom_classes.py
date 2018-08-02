@@ -3,6 +3,7 @@ import numpy as np
 import heapq
 import tmx
 import os
+import time
 from items import *
 from PIL import Image
 
@@ -15,22 +16,24 @@ sc = SCREEN_WIDTH, SCREEN_HEIGHT = (WIDTH * COLS, HEIGHT * ROWS)
 current_map = 'overworld'
 raw_maps = {}
 loc_array = {}
+options_menu = [['Settings'], ['Gameplay'], ['Exit']]
 map_dir = [f for f in os.listdir('./Maps') if os.path.isfile(os.path.join('./Maps', f))]
 img_dir = [f for f in os.listdir('./Images') if os.path.isfile(os.path.join('./Images', f))]
-char_width = {' ': 40, '!': 16, '"': 32, '#': 48, '$': 32, '%': 32, '&': 48, "'": 16, '(': 24, ')': 24, '*': 32, '+': 32, ',': 16, '-': 32, '.': 16, '/': 32,
+char_width = {' ': 32, '!': 16, '"': 32, '#': 48, '$': 32, '%': 32, '&': 48, "'": 16, '(': 24, ')': 24, '*': 32, '+': 32, ',': 16, '-': 32, '.': 16, '/': 32,
               '0': 32, '1': 32, '2': 32, '3': 32, '4': 32, '5': 32, '6': 32, '7': 32, '8': 32, '9': 32, ':': 16, ';': 16, '<':  32, '=': 32, '>': 32, '?': 32,
               '@': 48, 'A': 32, 'B': 32, 'C': 32, 'D': 32, 'E': 32, 'F': 32, 'G': 32, 'H': 32, 'I': 32, 'J': 32, 'K': 32, 'L': 32, 'M': 48, 'N': 32, 'O': 32, 
               'P': 32, 'Q': 32, 'R': 32, 'S': 32, 'T': 32, 'U': 32, 'V': 32, 'W': 48, 'X': 32, 'Y': 32, 'Z': 32, '[': 24, '\\': 32, ']': 24, '^': 32, '_': 32, 
-              '`': 8,  'a': 32, 'b': 32, 'c': 32, 'd': 32, 'e': 32, 'f': 32, 'g': 32, 'h': 32, 'i': 16, 'j': 32, 'k': 32, 'l': 32, 'm': 48, 'n': 32, 'o': 32,
+              '`': 8,  'a': 32, 'b': 32, 'c': 32, 'd': 32, 'e': 32, 'f': 32, 'g': 32, 'h': 32, 'i': 16, 'j': 32, 'k': 32, 'l': 24, 'm': 48, 'n': 32, 'o': 32,
               'p': 32, 'q': 32, 'r': 32, 's': 32, 't': 32, 'u': 32, 'v': 32, 'w': 48, 'x': 32, 'y': 32, 'z': 32, '{': 32, '|': 16, '}': 32, '~': 32
 }
 
-for file in map_dir:  # Some maps, mainly Mid and Collision, need copies, and i figure having backups cant hurt
+for file in map_dir:  # Some layers need copies, and i figure having backups cant hurt
     map_file = tmx.TileMap.load('./Maps/{}'.format(file))
     file_name = file.split('.')[0]
     raw_maps[file_name] = {}
     for layer in map_file.layers:
         map_data = []
+        raw_maps[file_name]['Sprite'] = np.zeros(shape=(map_file.width, map_file.height), dtype=int)
         for tile in layer.tiles:
             if tile.gid != 0:
                 map_data.append(tile.gid-1)
@@ -45,10 +48,10 @@ for file in map_dir:  # Some maps, mainly Mid and Collision, need copies, and i 
         else:
             raw_maps[file_name] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
 
-for file in img_dir:
-    file_name = file.split('.')[0]
-    cur_img = Image.open('./Images/{}'.format(file))
-    loc_array[file_name] = [[j, i, 64, 64] for i in range(0, cur_img.size[1], 64) for j in range(0, cur_img.size[0], 64)]
+for img in img_dir:
+    img_name = img.split('.')[0]
+    cur_img = Image.open('./Images/{}'.format(img))
+    loc_array[img_name] = [[j, i, WIDTH, HEIGHT] for i in range(0, cur_img.size[1], WIDTH) for j in range(0, cur_img.size[0], HEIGHT)]
     cur_img.close()
 
 tile_set = arcade.draw_commands.load_textures('./Images/Tile.png', loc_array['Tile'])
@@ -135,10 +138,11 @@ class Player:
             'XP': 0
         }
         self.inventory = [book, redbottle, greataxe]
-        self.appearance = tile_set[1767]
+        self.appearance = 1767
         self.equipped = []
         self.x = 26
         self.y = 71
+        self.state = 'Walking'
 
     @staticmethod
     def get_bag(bag, is_list=True):
@@ -154,38 +158,23 @@ class Player:
         return 'Str:{Str:02d} Dex:{Dex:02d} Int:{Int:02d} Wil:{Wil:02d} Per:{Per:02d}'.format(**self.stats).split()
 
     def get_points(self):
-        return ['{HP:02d}'.format(**self.stats), '{FP:02d}'.format(**self.stats)]
+        return '{HP:02d} {FP:02d}'.format(**self.stats).split()
 
 
 class Actor:
     def __init__(self, yx, sprite, disposition, target_distance):
         self.y, self.x = yx
         self.sprite = sprite
-        self.disposition = disposition  # 0 = Neutral, 1 = Aggressive, 2 = Friendly
+        self.disposition = disposition
         self.target_distance = target_distance
 
-    def move_me(self, goal, pathfind=True):
-        if pathfind:
-            path = astar((self.y, self.x), goal, raw_maps[current_map]['Collision'])
-            if path:
-                if self.disposition == 'Friendly':
-                    if len(path) > self.target_distance:
-                        raw_maps[current_map]['Mid'][self.y, self.x] = raw_maps[current_map]['Mid Copy'][self.y, self.x]
-                        raw_maps[current_map]['Collision'][self.y, self.x] = raw_maps[current_map]['Collision Copy'][self.y, self.x]
-                        self.y, self.x = path[-1]
-                        raw_maps[current_map]['Mid'][self.y, self.x] = self.sprite
-                        raw_maps[current_map]['Collision'][self.y, self.x] = 1
-                elif self.disposition == 'Aggressive':
-                    if len(path) > self.target_distance:
-                        raw_maps[current_map]['Mid'][self.y, self.x] = raw_maps[current_map]['Mid Copy'][self.y, self.x]
-                        raw_maps[current_map]['Collision'][self.y, self.x] = raw_maps[current_map]['Collision Copy'][self.y, self.x]
-                        self.y, self.x = path[-1]
-                        raw_maps[current_map]['Mid'][self.y, self.x] = self.sprite
-                        raw_maps[current_map]['Collision'][self.y, self.x] = 1
-        else:
-            raw_maps[current_map]['Mid'][self.y, self.x] = raw_maps[current_map]['Mid Copy'][self.y, self.x]
-            raw_maps[current_map]['Collision'][self.y, self.x] = raw_maps[current_map]['Collision Copy'][self.y, self.x]
-            self.y, self.x = goal
-            raw_maps[current_map]['Mid'][self.y, self.x] = self.sprite
-            raw_maps[current_map]['Collision'][self.y, self.x] = -1
+    def move_me(self, goal):
+        path = astar((self.y, self.x), goal, raw_maps[current_map]['Collision'])
+        if path:
+            if len(path) > self.target_distance:
+                raw_maps[current_map]['Sprite'][self.y, self.x] = 0
+                raw_maps[current_map]['Collision'][self.y, self.x] = raw_maps[current_map]['Collision Copy'][self.y, self.x]
+                self.y, self.x = path[-1]
+                raw_maps[current_map]['Sprite'][self.y, self.x] = self.sprite
+                raw_maps[current_map]['Collision'][self.y, self.x] = 1
 
