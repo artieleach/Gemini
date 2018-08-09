@@ -21,8 +21,8 @@ map_dir = [f for f in os.listdir('./Maps') if os.path.isfile(os.path.join('./Map
 img_dir = [f for f in os.listdir('./Images') if os.path.isfile(os.path.join('./Images', f))]
 char_width = {' ': 32, '!': 16, '"': 32, '#': 48, '$': 32, '%': 32, '&': 48, "'": 16, '(': 24, ')': 24, '*': 32, '+': 32, ',': 16, '-': 32, '.': 16, '/': 32,
               '0': 32, '1': 32, '2': 32, '3': 32, '4': 32, '5': 32, '6': 32, '7': 32, '8': 32, '9': 32, ':': 16, ';': 16, '<':  32, '=': 32, '>': 32, '?': 32,
-              '@': 48, 'A': 32, 'B': 32, 'C': 32, 'D': 32, 'E': 32, 'F': 32, 'G': 32, 'H': 32, 'I': 32, 'J': 32, 'K': 32, 'L': 32, 'M': 48, 'N': 32, 'O': 32, 
-              'P': 32, 'Q': 32, 'R': 32, 'S': 32, 'T': 32, 'U': 32, 'V': 32, 'W': 48, 'X': 32, 'Y': 32, 'Z': 32, '[': 24, '\\': 32, ']': 24, '^': 32, '_': 32, 
+              '@': 48, 'A': 32, 'B': 32, 'C': 32, 'D': 32, 'E': 32, 'F': 32, 'G': 32, 'H': 32, 'I': 32, 'J': 32, 'K': 32, 'L': 32, 'M': 48, 'N': 32, 'O': 32,
+              'P': 32, 'Q': 32, 'R': 32, 'S': 32, 'T': 32, 'U': 32, 'V': 32, 'W': 48, 'X': 32, 'Y': 32, 'Z': 32, '[': 24, '\\': 32, ']': 24, '^': 32, '_': 32,
               '`': 8,  'a': 32, 'b': 32, 'c': 32, 'd': 32, 'e': 32, 'f': 32, 'g': 32, 'h': 32, 'i': 16, 'j': 32, 'k': 32, 'l': 24, 'm': 48, 'n': 32, 'o': 32,
               'p': 32, 'q': 32, 'r': 32, 's': 32, 't': 32, 'u': 32, 'v': 32, 'w': 48, 'x': 32, 'y': 32, 'z': 32, '{': 32, '|': 16, '}': 32, '~': 32
 }
@@ -34,6 +34,7 @@ for file in map_dir:  # Some layers need copies, and i figure having backups can
     for layer in map_file.layers:
         map_data = []
         raw_maps[file_name]['Sprite'] = np.zeros(shape=(map_file.width, map_file.height), dtype=int)
+        raw_maps[file_name]['Sprite Copy'] = np.zeros(shape=(map_file.width, map_file.height), dtype=int)
         for tile in layer.tiles:
             if tile.gid != 0:
                 map_data.append(tile.gid-1)
@@ -58,14 +59,18 @@ tile_set = arcade.draw_commands.load_textures('./Images/Tile.png', loc_array['Ti
 font = arcade.draw_commands.load_textures('./Images/Font.png', loc_array['Font'])
 
 movemnet_keys = {
-    'Up': (arcade.key.W, arcade.key.UP, arcade.key.NUM_8),
-    'Down': (arcade.key.S, arcade.key.DOWN, arcade.key.NUM_2),
-    'Left': (arcade.key.A, arcade.key.LEFT, arcade.key.NUM_4),
-    'Right': (arcade.key.D, arcade.key.RIGHT, arcade.key.NUM_6),
-    'Inv': (arcade.key.E, arcade.key.TAB),
+    'Up': (arcade.key.W, arcade.key.UP, arcade.key.NUM_8, arcade.key.NUM_UP),
+    'Down': (arcade.key.S, arcade.key.DOWN, arcade.key.NUM_2, arcade.key.NUM_DOWN),
+    'Left': (arcade.key.A, arcade.key.LEFT, arcade.key.NUM_4, arcade.key.NUM_LEFT),
+    'Right': (arcade.key.D, arcade.key.RIGHT, arcade.key.NUM_6, arcade.key.NUM_RIGHT),
+    'Inv': (arcade.key.E, arcade.key.TAB, arcade.key.NUM_ENTER),
     'Context': (arcade.key.SPACE, arcade.key.NUM_ADD),
     'Exit': (arcade.key.ESCAPE, ),
-    'Map': (arcade.key.M, arcade.key.NUM_DECIMAL)
+    'Map': (arcade.key.M, arcade.key.NUM_DECIMAL),
+    'NE': (arcade.key.NUM_9, arcade.key.NUM_PAGE_UP),
+    'NW': (arcade.key.NUM_7, arcade.key.NUM_HOME),
+    'SE': (arcade.key.NUM_3, arcade.key.NUM_PAGE_DOWN),
+    'SW': (arcade.key.NUM_1, arcade.key.NUM_END),
 }
 
 
@@ -137,7 +142,7 @@ class Player:
             'FP': 0,
             'XP': 0
         }
-        self.inventory = [book, redbottle, greataxe]
+        self.inventory = [book, redbottle, greataxe, book, redbottle, greataxe, book, redbottle, greataxe]
         self.appearance = 1767
         self.equipped = []
         self.x = 26
@@ -172,9 +177,4 @@ class Actor:
         path = astar((self.y, self.x), goal, raw_maps[current_map]['Collision'])
         if path:
             if len(path) > self.target_distance:
-                raw_maps[current_map]['Sprite'][self.y, self.x] = 0
-                raw_maps[current_map]['Collision'][self.y, self.x] = raw_maps[current_map]['Collision Copy'][self.y, self.x]
                 self.y, self.x = path[-1]
-                raw_maps[current_map]['Sprite'][self.y, self.x] = self.sprite
-                raw_maps[current_map]['Collision'][self.y, self.x] = 1
-
