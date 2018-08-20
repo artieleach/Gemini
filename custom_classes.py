@@ -4,7 +4,8 @@ import heapq
 import tmx
 import os
 import time
-from items import *
+import textwrap
+from collections import defaultdict
 from PIL import Image
 
 wait_time = 0.01
@@ -24,8 +25,7 @@ char_width = {' ': 32, '!': 16, '"': 32, '#': 48, '$': 32, '%': 32, '&': 48, "'"
               '@': 48, 'A': 32, 'B': 32, 'C': 32, 'D': 32, 'E': 32, 'F': 32, 'G': 32, 'H': 32, 'I': 32, 'J': 32, 'K': 32, 'L': 32, 'M': 48, 'N': 32, 'O': 32,
               'P': 32, 'Q': 32, 'R': 32, 'S': 32, 'T': 32, 'U': 32, 'V': 32, 'W': 48, 'X': 32, 'Y': 32, 'Z': 32, '[': 24, '\\': 32, ']': 24, '^': 32, '_': 32,
               '`': 8,  'a': 32, 'b': 32, 'c': 32, 'd': 32, 'e': 32, 'f': 32, 'g': 32, 'h': 32, 'i': 16, 'j': 32, 'k': 32, 'l': 24, 'm': 48, 'n': 32, 'o': 32,
-              'p': 32, 'q': 32, 'r': 32, 's': 32, 't': 32, 'u': 32, 'v': 32, 'w': 48, 'x': 32, 'y': 32, 'z': 32, '{': 32, '|': 16, '}': 32, '~': 32
-}
+              'p': 32, 'q': 32, 'r': 32, 's': 32, 't': 32, 'u': 32, 'v': 32, 'w': 48, 'x': 32, 'y': 32, 'z': 32, '{': 32, '|': 16, '}': 32, '~': 32}
 
 for file in map_dir:  # Some layers need copies, and i figure having backups cant hurt
     map_file = tmx.TileMap.load('./Maps/{}'.format(file))
@@ -129,8 +129,16 @@ def roll_dice(s='1d'):
                                             for _ in range(d[0])))[d[-1] * (len(d) > 2):]) or np.random.randint(0, 1)
 
 
-class Player:
+class Entity:
+    def __init__(self, yx=(0, 0), name=None, sprite=-1):
+        self.y, self.x = yx
+        self.name = name
+        self.sprite = sprite
+
+
+class Player(Entity):
     def __init__(self):
+        Entity.__init__(self, yx=(71, 26), name=Player, sprite=1767)
         self.gold = Gold(100)
         self.stats = {
             'Str': roll_dice('4d6d1'),
@@ -142,11 +150,8 @@ class Player:
             'FP': 0,
             'XP': 0
         }
-        self.inventory = [book, redbottle, greataxe, book, redbottle, greataxe, book, redbottle, greataxe]
-        self.appearance = 1767
-        self.equipped = []
-        self.x = 26
-        self.y = 71
+        self.inventory = []
+        self.equipped = {'Head': None, 'Left Hand': None, 'Right Hand': None, 'Feet': None, 'Chest': None, 'Legs': None, 'Rings': [], }
         self.state = 'Walking'
 
     @staticmethod
@@ -166,15 +171,131 @@ class Player:
         return '{HP:02d} {FP:02d}'.format(**self.stats).split()
 
 
-class Actor:
-    def __init__(self, yx, sprite, disposition, target_distance):
-        self.y, self.x = yx
-        self.sprite = sprite
+class Actor(Entity):
+    def __init__(self, yx, name, sprite, disposition, target_distance):
+        Entity.__init__(self, yx, name, sprite)
         self.disposition = disposition
         self.target_distance = target_distance
 
     def move_me(self, goal):
-        path = astar((self.y, self.x), goal, raw_maps[current_map]['Collision'])
-        if path:
-            if len(path) > self.target_distance:
+        if (abs(self.y-goal[0]) + abs(self.x-goal[1])) > self.target_distance:  # i only want to calculate the path tree if need be
+            path = astar((self.y, self.x), goal, raw_maps[current_map]['Collision'])
+            if path:
                 self.y, self.x = path[-1]
+        elif self.y == goal[0] and self.x == goal[1]:  # lazy implentation of moving AI out of the way, needs to be rewritten for different dispositions
+            if raw_maps[current_map]['Collision'][self.y + 1, self.x] == -1:
+                self.y, self.x = self.y + 1, self.x
+            elif not raw_maps[current_map]['Collision'][self.y - 1, self.x] == -1:
+                self.y, self.x = self.y - 1, self.x
+            elif not raw_maps[current_map]['Collision'][self.y, self.x + 1] == -1:
+                self.y, self.x = self.y, self.x + 1
+            else:
+                self.y, self.x = self.y, self.x - 1
+
+
+class Item(Entity):
+    def __init__(self, yx, name, cost, weight, texture, flavor_text=None):
+        Entity.__init__(self, yx, name)
+        self.name = name
+        self.cost = cost
+        self.weight = weight
+        self.texture = texture
+        self.flavor_text = flavor_text
+        self.actions = ['Look', 'Drop']
+
+    def look(self):
+        return DialogItem(text=self.flavor_text, speaker=self.name)
+
+    def get_actions(self):
+        return [[' {} '.format(i)] for i in self.actions]
+
+
+class EquipmentItem(Item):
+    def __init__(self, name, cost, weight, texture):
+        Item.__init__(self, yx=(0, 0), name=name, cost=cost, weight=weight, texture=texture)
+        self.actions.append('Equip')
+
+
+class Armor(EquipmentItem):
+    def __init__(self, name, cost, weight, speed, asfc, armor_type, bonus, acp, max_bonus, texture):
+        EquipmentItem.__init__(self, name, cost, weight, texture)
+        self.armor_type = armor_type
+        self.speed = speed
+        self.asfc = asfc
+        self.armor_type = armor_type
+        self.bonus = bonus
+        self.acp = acp
+        self.cost = cost
+        self.max_bonus = max_bonus
+
+    def __repr__(self):
+        return '   {} (+{})'.format(self.name, self.bonus)
+
+    def look(self):
+        return DialogItem(text='{} {} {}'.format(self.armor_type, self.asfc, self.bonus), speaker=self.name)
+
+
+class Weapon(EquipmentItem):
+    def __init__(self, name, dmg, dmg_style, weight, weapon_type, cost, handed, crit_mult, dmg_range, weap_id, q=0):
+        self.weap_id = weap_id
+        self.q = q  # 0 = Wood, 1 = Bronze, 2 = Iron, 3 = Steel, 4 = Green, 5 = Blue, 6 = Albanium
+        self.texture = self.q * 57 + 2052 + weap_id
+        EquipmentItem.__init__(self, name, cost, weight, self.texture)
+        self.dmg = dmg
+        self.dmg_style = dmg_style
+        self.weapon_type = weapon_type
+        self.handed = handed
+        self.crit_mult = crit_mult
+        self.dmg_range = dmg_range
+
+    def __repr__(self):
+        return '   {} ({})'.format(self.name, self.dmg)
+
+    def look(self):
+        return DialogItem(text='({} - {}) {} {}-Handed, crit:{}'.format(self.dmg, self.dmg_style, self.weapon_type, 'Two'*bool(self.handed-1) or 'One', self.crit_mult), speaker=self.name)
+
+
+def gen_weapon(weapon, q):
+    return Weapon(name=weapon.name, dmg=weapon.dmg, dmg_style=weapon.dmg_style, weight=weapon.weight,
+                  weapon_type=weapon.weapon_type, cost=weapon.cost, handed=weapon.handed,
+                  crit_mult=weapon.crit_mult, dmg_range=weapon.dmg_range, weap_id=weapon.weap_id, q=q)
+
+
+class Gold:
+    def __init__(self, cost):
+        self.texture = [0, 0]
+        self.cost = (cost//64, cost % 64)
+        if self.cost[1] < 8:
+            self.texture[1] = 614
+        else:
+            self.texture[1] = 671
+        if self.cost[0] < 8:
+            self.texture[0] = 615
+        elif self.cost[0] < 64:
+            self.texture[0] = 672
+        elif self.cost[0] < 256:
+            self.texture[0] = 668
+        elif self.cost[0] < 512:
+            self.texture[0] = 669
+        else:
+            self.texture[0] = 670
+
+    def __repr__(self):
+        return '{}g {}s'.format(self.cost[0], self.cost[1])
+
+
+class DialogItem(Entity):
+    def __init__(self, text=None, speaker=None, dialog_opts=None, yx=(0, 0), on_level=None):
+        Entity.__init__(self, yx)
+        self.speaker = speaker
+        if type(text) is str:
+            self.text = textwrap.wrap(text, 22)
+        else:
+            self.text = text
+        if type(dialog_opts) is list:
+            if type(dialog_opts[0]) is list:
+                self.dialog_opts = [[' {} '.format(opt) for opt in lin] for lin in dialog_opts]
+            else:
+                self.dialog_opts = [[' {} '.format(opt)] for opt in dialog_opts]
+        else:
+            self.dialog_opts = dialog_opts

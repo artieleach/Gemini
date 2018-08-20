@@ -11,25 +11,21 @@ class Game(arcade.Window):
         self.cur_text = None
         self.cur_item = None
         self.p = Player()
-        self.actor1 = Actor(yx=(61, 26), sprite=908, disposition='Friendly', target_distance=1)
-        self.actor2 = Actor(yx=(71, 26), sprite=1780, disposition='Aggressive', target_distance=1)
-        self.actor_list = [self.actor1]
+        self.actor1 = Actor(yx=(61, 26), name='Goast', sprite=908, disposition='Friendly', target_distance=1)
+        self.actor2 = Actor(yx=(71, 26), name='Victor', sprite=1780, disposition='Aggressive', target_distance=6)
+        self.actor_list = [self.actor1, self.actor2]
 
     def draw_base(self):
         arcade.start_render()
         for row in range(ROWS):
             for col in range(COLS+1):
                 for cur_layer in ['Back', 'Mid', 'Sprite', 'Fore']:
-                    if raw_maps[current_map][cur_layer][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]:  # only draw sprites where there are sprites
+                    if raw_maps[current_map][cur_layer][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]:  # only draw tiles where there are tiles
                         arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map][cur_layer][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]])
+
     def on_draw(self):
         self.add_sprites()
         self.draw_base()
-        if self.p.state is 'Talking':
-            if self.cur_text.speaker:
-                raw_maps['dialog'][3] = [i for s in [[0], [1563], [1564] * ((len(self.cur_text.speaker)) // 2 + 1), [1565], [-1] * 15] for i in s][:16]
-            else:
-                raw_maps['dialog'][3] = [-1] * 16
         for row in range(ROWS):
             for col in range(COLS):
                 if self.p.state == 'Talking':
@@ -42,8 +38,21 @@ class Game(arcade.Window):
             self.gen_inv()
         if self.p.state is 'Walking':
             cur_health = [item for sublist in [[1745]*(self.p.stats['HP'] // 2), [1746]*(self.p.stats['HP'] % 2 == 1)] for item in sublist]
-            for col in range(-(-self.p.stats['HP'] // 2)):
+            for col in range(-(-self.p.stats['HP'] // 2)):  # weird ass way of getting how many heart containers to draw
                 self.gen_lone_tile(cur_health[col], (0.5+col, 8.5))
+
+    def switch_state(self, newstate):
+        self.cur_opt = [0, 0, 0]
+        if newstate == 'Talking':
+            if self.cur_text.speaker:
+                raw_maps['dialog'][3] = [i for s in [[0], [1563], [1564] * ((len(self.cur_text.speaker)) // 2 + 1), [1565], [-1] * 15] for i in s][:16]
+            else:
+                raw_maps['dialog'][3] = [-1] * 16
+        elif newstate == 'Walking':
+            pass
+        elif newstate == 'Inventory':
+            self.inventory_screen = 0
+        self.p.state = newstate
 
     def cursor(self, list_locs):
         try:
@@ -74,29 +83,33 @@ class Game(arcade.Window):
                         arcade.draw_texture_rectangle(width_sum + x * WIDTH, (y - itempos - int(txt is not None)) * HEIGHT, WIDTH, HEIGHT, font[ord(char)])
             self.cursor(cursor_locs)
         if txt:
-            for linepos, line in enumerate(txt[self.cur_opt[2]:self.cur_opt[2] + 3]):
+            for linepos, line in enumerate(txt[self.cur_opt[2]:]):
                 width_sum = 0
                 for charpos, char in enumerate(txt[linepos + self.cur_opt[2]]):
                     width_sum += char_width[txt[linepos + self.cur_opt[2]][charpos-1]]
                     arcade.draw_texture_rectangle(width_sum + (x * WIDTH), ((y - linepos) * HEIGHT), WIDTH, HEIGHT, font[ord(char)])
 
     def gen_inv(self):
+        for i in range(4):
+            self.gen_lone_tile(i+1820, (1.5 + i*2, 8))
         if self.inventory_screen == 0:
             for i in range(len(self.p.inventory[self.cur_opt[2]:self.cur_opt[2] + 6 or -1])):
-                self.gen_lone_tile(self.p.inventory[i + self.cur_opt[2]].texture, yx=(3, 6 - i))
+                self.gen_lone_tile(self.p.inventory[i + self.cur_opt[2]].texture, yx=(2, 6.5 - i))
             if not self.selected:
-                self.gen_text(opts=self.p.get_bag(self.p.inventory)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6, 1.5))
+                self.gen_text(opts=self.p.get_bag(self.p.inventory)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 1.5))
             else:
-                self.gen_text(txt=self.p.get_bag(self.p.inventory, False)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6, 2))
+                self.gen_text(txt=self.p.get_bag(self.p.inventory, False)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 2.5))
                 self.gen_sub_menu()
         elif self.inventory_screen == 1:
+            pass
+            '''
             for i in range(len(self.p.equipped[self.cur_opt[2]:self.cur_opt[2] + 6 or -1])):
-                self.gen_lone_tile(self.p.equipped[i + self.cur_opt[2]].texture, yx=(6.5 - i, 2))
+                self.gen_lone_tile(self.p.equipped[i + self.cur_opt[2]].texture, yx=(2, 6.5 - i))
             if not self.selected:
-                self.gen_text(opts=self.p.equip_stats()[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6, 1))
+                self.gen_text(opts=self.p.equip_stats()[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 1.5))
             else:
-                self.gen_text(txt=self.p.get_bag(self.p.equipped, False)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6, 1))
-                self.gen_sub_menu()
+                self.gen_text(txt=self.p.get_bag(self.p.equipped, False)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 2.5))
+                self.gen_sub_menu()'''
         elif self.inventory_screen == 2:
             self.gen_text(self.p.get_stats(), yx=(6.5, 1))
         else:
@@ -144,12 +157,12 @@ class Game(arcade.Window):
                 if self.selected:
                     self.selected = False
                 else:
-                    self.p.state = 'Walking'
+                    self.switch_state('Walking')
             if key in movemnet_keys['Context']:
                 if self.inventory_screen == 0:
                     if not self.selected:
                         self.cur_item = self.p.inventory[sum(self.cur_opt)]
-                    else:
+                    else:   
                         self.interact_item(self.cur_item, self.cur_item.actions[self.cur_opt[1]])
                     self.cur_opt = [0, 0, 0]
                     self.selected = not self.selected
@@ -161,18 +174,19 @@ class Game(arcade.Window):
                     self.cur_opt = [0, 0, 0]
                     self.selected = not self.selected
                 elif self.inventory_screen == 3:
+                    if 'Settings' in options_menu[self.cur_opt[1]][0]:
+                        Game.close(self)
+                    if 'Gameplay' in options_menu[self.cur_opt[1]][0]:
+                        Game.close(self)
                     if 'Exit' in options_menu[self.cur_opt[1]][0]:
                         Game.close(self)
         elif self.p.state is 'Walking':
             if key in movemnet_keys['Inv']:
-                self.cur_opt = [0, 0, 0]
-                self.p.state = 'Inventory'
-                self.inventory_screen = 0
+                self.switch_state('Inventory')
             if key in movemnet_keys['Context']:
-                if raw_maps[current_map]['Collision'][self.p.y+1, self.p.x] in nodes:
-                    self.cur_opt = [0, 0, 0]
-                    self.cur_text = nodes[raw_maps[current_map]['Collision'][self.p.y+1, self.p.x]]
-                    self.p.state = 'Talking'
+                if raw_maps[current_map]['Sprite'][self.p.y+1, self.p.x] in nodes:
+                    self.cur_text = nodes[raw_maps[current_map]['Sprite'][self.p.y+1, self.p.x]]
+                    self.switch_state('Talking')
         elif self.p.state is 'Talking':
             if self.cur_text.dialog_opts:
                 if key in movemnet_keys['Right'] and self.cur_opt[0] < len(self.cur_text.dialog_opts):
@@ -189,23 +203,19 @@ class Game(arcade.Window):
                 if self.cur_opt[2] < len(self.cur_text.text) - 2:
                     self.cur_opt[2] += 1
                 else:
-                    self.p.state = 'Walking'
+                    self.switch_state('Walking')
             if key in movemnet_keys['Inv']:
-                self.p.state = 'Walking'
+                self.switch_state('Walking')
         if key in movemnet_keys['Exit']:
             if self.p.state is 'Inventory' and self.selected:
                 self.selected = False
             elif self.p.state is not 'Walking':
-                self.p.state = 'Walking'
+                self.switch_state('Walking')
             else:
-                self.p.state = 'Inventory'
+                self.switch_state('Inventory')
                 self.inventory_screen = 3
-        if key == arcade.key.H:
-            self.p.stats['HP'] += 1
         if key == arcade.key.N:
-            self.p.stats['HP'] -= 1
-        if key == arcade.key.M:
-            print(str(raw_maps[current_map]['Collision'][self.p.y-2:self.p.y+3, self.p.x-2:self.p.x+3]))
+            self.game_step()
 
     def update(self, delta_time: float):
         if self.p.state is 'Walking':
@@ -250,26 +260,30 @@ class Game(arcade.Window):
         if action == 'Equip':
             if item in self.p.inventory:
                 self.p.inventory.remove(item)
+                if type(item) is Weapon:
+                    pass
                 if type(item) is Armor:
                     self.p.equipped.insert(0, item)
                 else:
                     self.p.equipped.insert(-1, item)
-            else:
-                self.p.equipped.remove(item)
-                self.p.inventory.append(item)
+            else:  # since its not in the inv and equip is being called, that means it must be equipped
+                pass
+                # self.p.inventory.append(item)
         elif action == 'Look':
             self.cur_text = item.look()
-            self.p.state = 'Talking'
+            self.switch_state('Talking')
         elif action == 'Drop':
             if item in self.p.inventory:
                 self.p.inventory.remove(item)
 
     def add_sprites(self):
         raw_maps[current_map]['Sprite'][:] = raw_maps[current_map]['Sprite Copy']
+        raw_maps[current_map]['Collision'][:] = raw_maps[current_map]['Collision Copy']
         for actor in self.actor_list:
             raw_maps[current_map]['Sprite'][actor.y, actor.x] = actor.sprite
+            # raw_maps[current_map]['Collision'][actor.y, actor.x] = 1
         else:
-            raw_maps[current_map]['Sprite'][self.p.y, self.p.x] = self.p.appearance
+            raw_maps[current_map]['Sprite'][self.p.y, self.p.x] = self.p.sprite
 
     def game_step(self):
         for act in self.actor_list:

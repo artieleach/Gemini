@@ -1,104 +1,4 @@
-import textwrap
-
-
-class Item:
-    def __init__(self, name, cost, weight, texture, flavor_text=None):
-        self.name = name
-        self.cost = cost
-        self.weight = weight
-        self.texture = texture
-        self.flavor_text = flavor_text
-        self.actions = ['Look', 'Drop']
-
-    def look(self):
-        return DialogItem(text=self.flavor_text, speaker=self.name)
-
-    def get_actions(self):
-        return [[' {} '.format(i)] for i in self.actions]
-
-
-class EquipmentItem(Item):
-    def __init__(self, name, cost, weight, texture):
-        Item.__init__(self, name, cost, weight, texture)
-        self.actions.append('Equip')
-
-
-class Armor(EquipmentItem):
-    def __init__(self, name, cost, weight, speed, asfc, type, bonus, acp, max_bonus, texture):
-        EquipmentItem.__init__(self, name, cost, weight, texture)
-        self.type = type
-        self.speed = speed
-        self.asfc = asfc
-        self.type = type
-        self.bonus = bonus
-        self.acp = acp
-        self.cost = cost
-        self.max_bonus = max_bonus
-
-    def __repr__(self):
-        return '   {} (+{})'.format(self.name, self.bonus)
-
-    def look(self):
-        return DialogItem(text='{} {} {}'.format(self.type, self.asfc, self.bonus), speaker=self.name)
-
-
-class Weapon(EquipmentItem):
-    def __init__(self, name, damage, dmg_style, weight, style, cost, handed, crit_mult, range, weapID=0, quality=0):
-        self.quality = quality  # 0 = Wood, 1 = Bronze, 2 = Iron, 3 = Steel, 4 = Green, 5 = Blue, 6 = Albanium
-        self.texture = self.quality * 114 + 2052 + weapID
-        EquipmentItem.__init__(self, name, cost, weight, self.texture)
-        self.damage = damage
-        self.damage_style = dmg_style
-        self.weapon_type = style
-        self.handed = handed
-        self.critical_multiplier = crit_mult
-        self.range = range
-
-    def __repr__(self):
-        return '   {} ({})'.format(self.name, self.damage)
-
-    def look(self):
-        return DialogItem(text='({} - {}) {} {}-Handed, crit:{}'.format(self.damage, self.damage_style, self.weapon_type, 'Two'*bool(self.handed-1) or 'One', self.critical_multiplier), speaker=self.name)
-
-
-class Gold:
-    def __init__(self, cost):
-        self.texture = [0, 0]
-        self.cost = (cost//64, cost % 64)
-        if self.cost[1] < 8:
-            self.texture[1] = 614
-        else:
-            self.texture[1] = 671
-        if self.cost[0] < 8:
-            self.texture[0] = 615
-        elif self.cost[0] < 64:
-            self.texture[0] = 672
-        elif self.cost[0] < 256:
-            self.texture[0] = 668
-        elif self.cost[0] < 512:
-            self.texture[0] = 669
-        else:
-            self.texture[0] = 670
-
-    def __repr__(self):
-        return '{}g {}s'.format(self.cost[0], self.cost[1])
-
-
-class DialogItem:
-    def __init__(self, text=None, speaker=None, dialog_opts=None):
-        self.speaker = speaker
-        if type(text) is str:
-            self.text = textwrap.wrap(text, 22)
-        else:
-            self.text = text
-        if type(dialog_opts) is list:
-            if type(dialog_opts[0]) is list:
-                self.dialog_opts = [[' {} '.format(opt) for opt in lin] for lin in dialog_opts]
-            else:
-                self.dialog_opts = [[' {} '.format(opt)] for opt in dialog_opts]
-        else:
-            self.dialog_opts = dialog_opts
-
+from custom_classes import *
 
 nodes = {
     2: DialogItem(text='Anime makes you gay.', speaker='Your Mother'),
@@ -106,7 +6,7 @@ nodes = {
                                                         ['No', 'Steal half', 'Whose boat?'],
                                                         ['Eat the rich']])),
 }
-
+dialog_opts = {'Yes': 5, 'Why': 5, 'Property is Theft': 5, 'No': 5, 'Steal Half': 5, 'Eat the rich': 5, }
 
 scilla = Item(name='Scilla', cost=10, weight=0, texture=541, flavor_text='A lovely blue flower.')
 rose = Item(name='Red', cost=10, weight=0, texture=542, flavor_text='Not as red as you expected.')
@@ -135,74 +35,74 @@ paper = Item(name='Parchment', cost=2, weight=0, texture=896)
 document = Item(name='Document', cost=8, weight=0, texture=897)
 scroll = Item(name='Scroll', cost=60, weight=0, texture=899)
 
-gauntlet = Weapon(name='Gauntlet', damage='1d3', dmg_style='Bludgeoning', weight=1, style='simple', cost=2, handed=1, crit_mult='x2', range=0, weapID=0)
+gauntlet = Weapon(name='Gauntlet', dmg='1d3', dmg_style='Bludgeoning', weight=1, weapon_type='simple', cost=2, handed=1, crit_mult='x2', dmg_range=0, weap_id=0)
 
-dagger = Weapon(name='Dagger', damage='1d4', dmg_style='Piercing or slashing', weight=1, style='simple', cost=2, handed=1, crit_mult='19-20/x2', range=10, weapID=0)
-spikedGauntlet = Weapon(name='Spiked Gauntlet', damage='1d4', dmg_style='Piercing', weight=1, style='simple', cost=5, handed=1, crit_mult='x2', range=0, weapID=1)
-lightmace = Weapon(name='Light Mace', damage='1d6', dmg_style='Bludgeoning', weight=4, style='simple', cost=5, handed=1, crit_mult='x2', range=0, weapID=2)
-sickle = Weapon(name='Sickle', damage='1d6', dmg_style='Slashing', weight=2, style='simple', cost=6, handed=1, crit_mult='x2', range=0, weapID=3)
-club = Weapon(name='Club', damage='1d6', dmg_style='Bludgeoning', weight=3, style='simple', cost=0, handed=1, crit_mult='x2', range=10, weapID=4)
-hevaymace = Weapon(name='Heavy Mace', damage='1d8', dmg_style='Bludgeoning', weight=8, style='simple', cost=12, handed=1, crit_mult='x2', range=0, weapID=5)
-morningstar = Weapon(name='Morningstar', damage='1d8', dmg_style='Bludgeoning and piercing', weight=6, style='simple', cost=8, handed=1, crit_mult='x2', range=0, weapID=6)
-shortspear = Weapon(name='Short Spear', damage='1d6', dmg_style='Piercing', weight=3, style='simple', cost=1, handed=1, crit_mult='x2', range=20, weapID=7)
-longspear = Weapon(name='Long Spear', damage='1d8', dmg_style='Piercing', weight=9, style='simple', cost=5, handed=2, crit_mult='x3', range=0, weapID=8)
-quarterstaff = Weapon(name='Quarterstaff', damage='1d6/1d6', dmg_style='Bludgeoning', weight=4, style='simple', cost=0, handed=2, crit_mult='x2', range=0, weapID=9)
-throwingaxe = Weapon(name='Throwing Axe', damage='1d6', dmg_style='Slashing', weight=2, style='martial', cost=8, handed=2, crit_mult='x2', range=10, weapID=10)
-lighthammer = Weapon(name='Light Hammer', damage='1d4', dmg_style='Bludgeoning', weight=2, style='martial', cost=1, handed=1, crit_mult='x2', range=20, weapID=11)
-handaxe = Weapon(name='Hand Axe', damage='1d6', dmg_style='Slashing', weight=3, style='martial', cost=6, handed=1, crit_mult='x3', range=0, weapID=12)
-kukri = Weapon(name='Kukri', damage='1d4', dmg_style='Slashing', weight=2, style='martial', cost=8, handed=1, crit_mult='18-20/x2', range=0, weapID=13)
-lightPick = Weapon(name='Light Pick', damage='1d4', dmg_style='Piercing', weight=3, style='martial', cost=4, handed=1, crit_mult='x4', range=0, weapID=14)
-shortsword = Weapon(name='Short Sword', damage='1d6', dmg_style='Piercing', weight=2, style='martial', cost=10, handed=1, crit_mult='19-20/x2', range=0, weapID=15)
-battleaxe = Weapon(name='Battle Axe', damage='1d8', dmg_style='Slashing', weight=6, style='martial', cost=10, handed=1, crit_mult='x3', range=0, weapID=16)
-flail = Weapon(name='Flail', damage='1d8', dmg_style='Bludgeoning', weight=5, style='martial', cost=8, handed=1, crit_mult='x2', range=0, weapID=17)
-longsword = Weapon(name='Long Sword', damage='1d8', dmg_style='Slashing', weight=4, style='martial', cost=15, handed=1, crit_mult='19-20/x2', range=0, weapID=18)
-heavypick = Weapon(name='Heavy Pick', damage='1d6', dmg_style='Piercing', weight=6, style='martial', cost=8, handed=1, crit_mult='x4', range=0, weapID=19)
-rapier = Weapon(name='Rapier', damage='1d6', dmg_style='Piercing', weight=2, style='martial', cost=20, handed=1, crit_mult='18-20/x2', range=0, weapID=20)
-scimitar = Weapon(name='Scimitar', damage='1d6', dmg_style='Slashing', weight=4, style='martial', cost=15, handed=1, crit_mult='18-20/x2', range=0, weapID=21)
-trident = Weapon(name='Trident', damage='1d8', dmg_style='Piercing', weight=4, style='martial', cost=15, handed=1, crit_mult='x2', range=10, weapID=22)
-warhammer = Weapon(name='War Hammer', damage='1d8', dmg_style='Bludgeoning', weight=5, style='martial', cost=12, handed=1, crit_mult='3', range=0, weapID=23)
-falchion = Weapon(name='Falchion', damage='2d4', dmg_style='Slashing', weight=8, style='martial', cost=75, handed=2, crit_mult='18-20/x2', range=0, weapID=24)
-glaive = Weapon(name='Glaive', damage='1d10', dmg_style='Slashing', weight=10, style='martial', cost=8, handed=2, crit_mult='x3', range=0, weapID=25)
-greataxe = Weapon(name='Great Axe', damage='1d12', dmg_style='Slashing', weight=12, style='martial', cost=20, handed=2, crit_mult='x3', range=0, weapID=26)
-greatclub = Weapon(name='Great Club', damage='1d10', dmg_style='Bludgeoning', weight=8, style='martial', cost=5, handed=2, crit_mult='x2', range=0, weapID=27)
-heavyflail = Weapon(name='Heavy Flail', damage='1d10', dmg_style='Bludgeoning', weight=10, style='martial', cost=15, handed=2, crit_mult='19-20/x2', range=0, weapID=28)
-greatsword = Weapon(name='Great Sword', damage='2d6', dmg_style='Slashing', weight=8, style='martial', cost=50, handed=2, crit_mult='19-20/x2', range=0, weapID=29)
-guisarme = Weapon(name='Guisarme', damage='2d4', dmg_style='Slashing', weight=12, style='martial', cost=9, handed=2, crit_mult='x3', range=0, weapID=30)
-halberd = Weapon(name='Halberd', damage='1d10', dmg_style='Piercing or slashing', weight=12, style='martial', cost=10, handed=2, crit_mult='x3', range=0, weapID=31)
-lance = Weapon(name='Lance', damage='1d8', dmg_style='Piercing', weight=10, style='martial', cost=10, handed=2, crit_mult='x3', range=0, weapID=32)
-ranseur = Weapon(name='Ranseur', damage='2d4', dmg_style='Piercing', weight=12, style='martial', cost=10, handed=2, crit_mult='x3', range=0, weapID=33)
-scythe = Weapon(name='Scythe', damage='2d4', dmg_style='Piercing or slashing', weight=10, style='martial', cost=18, handed=2, crit_mult='x4', range=0, weapID=34)
-kama = Weapon(name='Kama', damage='1d6', dmg_style='Slashing', weight=2, style='exotic', cost=2, handed=1, crit_mult='x2', range=0, weapID=35)
-nunchaku = Weapon(name='Nunchaku', damage='1d6', dmg_style='Bludgeoning', weight=2, style='exotic', cost=2, handed=1, crit_mult='x2', range=0, weapID=36)
-sai = Weapon(name='Sai', damage='1d4', dmg_style='Bludgeoning', weight=1, style='exotic', cost=1, handed=1, crit_mult='x2', range=10, weapID=37)
-siangham = Weapon(name='Siangham', damage='1d6', dmg_style='Piercing', weight=1, style='exotic', cost=3, handed=1, crit_mult='x2', range=0, weapID=38)
-bastardsword = Weapon(name='Bastard Sword', damage='1d10', dmg_style='Slashing', weight=6, style='exotic', cost=35, handed=1, crit_mult='19-20/x2', range=0, weapID=39)
-dwarvenwaraxe = Weapon(name='Dwarven Waraxe', damage='1d10', dmg_style='Slashing', weight=8, style='exotic', cost=30, handed=1, crit_mult='x3', range=0, weapID=40)
-orcdoubleaxe = Weapon(name='Orc Double Axe', damage='1d8/1d8', dmg_style='Slashing', weight=15, style='exotic', cost=60, handed=2, crit_mult='x3', range=0, weapID=41)
-spikedchain = Weapon(name='Spiked Chain', damage='2d4', dmg_style='Piercing', weight=10, style='exotic', cost=25, handed=2, crit_mult='x2', range=0, weapID=42)
-direflail = Weapon(name='Dire Flail', damage='1d8/1d8', dmg_style='Bludgeoning', weight=10, style='exotic', cost=90, handed=2, crit_mult='x2', range=0, weapID=43)
-gnomehookedhammer = Weapon(name='Gnome Hooked Hammer', damage='1d8/1d6', dmg_style='Bludgeoning/Piercing', weight=6, style='exotic', cost=20, handed=2, crit_mult='x3/x4', range=0, weapID=44)
-twobladedsword = Weapon(name='Two Bladed Sword', damage='1d8/1d8', dmg_style='Slashing', weight=10, style='exotic', cost=100, handed=2, crit_mult='19-20/x2', range=0, weapID=45)
-dwarvenurgrosh = Weapon(name='Dwarven Urgrosh', damage='1d8/1d6', dmg_style='Slashing or piercing', weight=12, style='exotic', cost=50, handed=2, crit_mult='x3', range=0, weapID=46)
-bolas = Weapon(name='Bolas', damage='1d4', dmg_style='Bludgeoning', weight=2, style='exotic', cost=5, handed=2, crit_mult='x2', range=10, weapID=47)
-
-
-lightcrossbow = Weapon(name='Light Crossbow', damage='1d8', dmg_style='Piercing', weight=4, style='simple', cost=35, handed=2, crit_mult='19-20/x2', range=80, weapID=1813)
-heavycrossbow = Weapon(name='Heavy Crossbow', damage='1d10', dmg_style='Piercing', weight=8, style='simple', cost=50, handed=2, crit_mult='19-20/x2', range=120, weapID=1870)
-dart = Weapon(name='Dart', damage='1d4', dmg_style='Piercing', weight=1, style='simple', cost=5, handed=2, crit_mult='x2', range=20, weapID=0)
-javelin = Weapon(name='Javelin', damage='1d6', dmg_style='Piercing', weight=2, style='simple', cost=1, handed=2, crit_mult='x2', range=30, weapID=2038)
-longbow = Weapon(name='Longbow', damage='1d8', dmg_style='Piercing', weight=3, style='martial', cost=75, handed=2, crit_mult='x3', range=100, weapID=1928)
-compositelongbow = Weapon(name='Composite Longbow', damage='1d8', dmg_style='Piercing', weight=3, style='martial', cost=100, handed=2, crit_mult='x3', range=110, weapID=0)
-shortbow = Weapon(name='Shortbow', damage='1d6', dmg_style='Piercing', weight=2, style='martial', cost=30, handed=2, crit_mult='x3', range=60, weapID=1813)
-compositeshortbow = Weapon(name='Composite Shortbow', damage='1d6', dmg_style='Piercing', weight=2, style='martial', cost=75, handed=2, crit_mult='x3', range=70, weapID=0)
-handcrossbow = Weapon(name='Hand Crossbow', damage='1d4', dmg_style='Piercing', weight=2, style='exotic', cost=100, handed=2, crit_mult='19-20/x2', range=30, weapID=0)
-repeatingheavycrossbow = Weapon(name='Repeating Heavy Crossbow', damage='1d10', dmg_style='Piercing', weight=12, style='exotic', cost=400, handed=2, crit_mult='19-20/x2', range=120, weapID=0)
-lightrepeatingcrossbow = Weapon(name='Light Repeating Crossbow', damage='1d8', dmg_style='Piercing', weight=6, style='exotic', cost=250, handed=2, crit_mult='19-20/x2', range=80, weapID=0)
+dagger = Weapon(name='Dagger', dmg='1d4', dmg_style='Piercing or slashing', weight=1, weapon_type='simple', cost=2, handed=1, crit_mult='19-20/x2', dmg_range=10, weap_id=0)
+spikedGauntlet = Weapon(name='Spiked Gauntlet', dmg='1d4', dmg_style='Piercing', weight=1, weapon_type='simple', cost=5, handed=1, crit_mult='x2', dmg_range=0, weap_id=1)
+lightmace = Weapon(name='Light Mace', dmg='1d6', dmg_style='Bludgeoning', weight=4, weapon_type='simple', cost=5, handed=1, crit_mult='x2', dmg_range=0, weap_id=2)
+sickle = Weapon(name='Sickle', dmg='1d6', dmg_style='Slashing', weight=2, weapon_type='simple', cost=6, handed=1, crit_mult='x2', dmg_range=0, weap_id=3)
+club = Weapon(name='Club', dmg='1d6', dmg_style='Bludgeoning', weight=3, weapon_type='simple', cost=0, handed=1, crit_mult='x2', dmg_range=10, weap_id=4)
+hevaymace = Weapon(name='Heavy Mace', dmg='1d8', dmg_style='Bludgeoning', weight=8, weapon_type='simple', cost=12, handed=1, crit_mult='x2', dmg_range=0, weap_id=5)
+morningstar = Weapon(name='Morningstar', dmg='1d8', dmg_style='Bludgeoning and piercing', weight=6, weapon_type='simple', cost=8, handed=1, crit_mult='x2', dmg_range=0, weap_id=6)
+shortspear = Weapon(name='Short Spear', dmg='1d6', dmg_style='Piercing', weight=3, weapon_type='simple', cost=1, handed=1, crit_mult='x2', dmg_range=20, weap_id=7)
+longspear = Weapon(name='Long Spear', dmg='1d8', dmg_style='Piercing', weight=9, weapon_type='simple', cost=5, handed=2, crit_mult='x3', dmg_range=0, weap_id=8)
+quarterstaff = Weapon(name='Quarterstaff', dmg='1d6/1d6', dmg_style='Bludgeoning', weight=4, weapon_type='simple', cost=0, handed=2, crit_mult='x2', dmg_range=0, weap_id=9)
+throwingaxe = Weapon(name='Throwing Axe', dmg='1d6', dmg_style='Slashing', weight=2, weapon_type='martial', cost=8, handed=2, crit_mult='x2', dmg_range=10, weap_id=10)
+lighthammer = Weapon(name='Light Hammer', dmg='1d4', dmg_style='Bludgeoning', weight=2, weapon_type='martial', cost=1, handed=1, crit_mult='x2', dmg_range=20, weap_id=11)
+handaxe = Weapon(name='Hand Axe', dmg='1d6', dmg_style='Slashing', weight=3, weapon_type='martial', cost=6, handed=1, crit_mult='x3', dmg_range=0, weap_id=12)
+kukri = Weapon(name='Kukri', dmg='1d4', dmg_style='Slashing', weight=2, weapon_type='martial', cost=8, handed=1, crit_mult='18-20/x2', dmg_range=0, weap_id=13)
+lightPick = Weapon(name='Light Pick', dmg='1d4', dmg_style='Piercing', weight=3, weapon_type='martial', cost=4, handed=1, crit_mult='x4', dmg_range=0, weap_id=14)
+shortsword = Weapon(name='Short Sword', dmg='1d6', dmg_style='Piercing', weight=2, weapon_type='martial', cost=10, handed=1, crit_mult='19-20/x2', dmg_range=0, weap_id=15)
+battleaxe = Weapon(name='Battle Axe', dmg='1d8', dmg_style='Slashing', weight=6, weapon_type='martial', cost=10, handed=1, crit_mult='x3', dmg_range=0, weap_id=16)
+flail = Weapon(name='Flail', dmg='1d8', dmg_style='Bludgeoning', weight=5, weapon_type='martial', cost=8, handed=1, crit_mult='x2', dmg_range=0, weap_id=17)
+longsword = Weapon(name='Long Sword', dmg='1d8', dmg_style='Slashing', weight=4, weapon_type='martial', cost=15, handed=1, crit_mult='19-20/x2', dmg_range=0, weap_id=18)
+heavypick = Weapon(name='Heavy Pick', dmg='1d6', dmg_style='Piercing', weight=6, weapon_type='martial', cost=8, handed=1, crit_mult='x4', dmg_range=0, weap_id=19)
+rapier = Weapon(name='Rapier', dmg='1d6', dmg_style='Piercing', weight=2, weapon_type='martial', cost=20, handed=1, crit_mult='18-20/x2', dmg_range=0, weap_id=20)
+scimitar = Weapon(name='Scimitar', dmg='1d6', dmg_style='Slashing', weight=4, weapon_type='martial', cost=15, handed=1, crit_mult='18-20/x2', dmg_range=0, weap_id=21)
+trident = Weapon(name='Trident', dmg='1d8', dmg_style='Piercing', weight=4, weapon_type='martial', cost=15, handed=1, crit_mult='x2', dmg_range=10, weap_id=22)
+warhammer = Weapon(name='War Hammer', dmg='1d8', dmg_style='Bludgeoning', weight=5, weapon_type='martial', cost=12, handed=1, crit_mult='3', dmg_range=0, weap_id=23)
+falchion = Weapon(name='Falchion', dmg='2d4', dmg_style='Slashing', weight=8, weapon_type='martial', cost=75, handed=2, crit_mult='18-20/x2', dmg_range=0, weap_id=24)
+glaive = Weapon(name='Glaive', dmg='1d10', dmg_style='Slashing', weight=10, weapon_type='martial', cost=8, handed=2, crit_mult='x3', dmg_range=0, weap_id=25)
+greataxe = Weapon(name='Great Axe', dmg='1d12', dmg_style='Slashing', weight=12, weapon_type='martial', cost=20, handed=2, crit_mult='x3', dmg_range=0, weap_id=26)
+greatclub = Weapon(name='Great Club', dmg='1d10', dmg_style='Bludgeoning', weight=8, weapon_type='martial', cost=5, handed=2, crit_mult='x2', dmg_range=0, weap_id=27)
+heavyflail = Weapon(name='Heavy Flail', dmg='1d10', dmg_style='Bludgeoning', weight=10, weapon_type='martial', cost=15, handed=2, crit_mult='19-20/x2', dmg_range=0, weap_id=28)
+greatsword = Weapon(name='Great Sword', dmg='2d6', dmg_style='Slashing', weight=8, weapon_type='martial', cost=50, handed=2, crit_mult='19-20/x2', dmg_range=0, weap_id=29)
+guisarme = Weapon(name='Guisarme', dmg='2d4', dmg_style='Slashing', weight=12, weapon_type='martial', cost=9, handed=2, crit_mult='x3', dmg_range=0, weap_id=30)
+halberd = Weapon(name='Halberd', dmg='1d10', dmg_style='Piercing or slashing', weight=12, weapon_type='martial', cost=10, handed=2, crit_mult='x3', dmg_range=0, weap_id=31)
+lance = Weapon(name='Lance', dmg='1d8', dmg_style='Piercing', weight=10, weapon_type='martial', cost=10, handed=2, crit_mult='x3', dmg_range=0, weap_id=32)
+ranseur = Weapon(name='Ranseur', dmg='2d4', dmg_style='Piercing', weight=12, weapon_type='martial', cost=10, handed=2, crit_mult='x3', dmg_range=0, weap_id=33)
+scythe = Weapon(name='Scythe', dmg='2d4', dmg_style='Piercing or slashing', weight=10, weapon_type='martial', cost=18, handed=2, crit_mult='x4', dmg_range=0, weap_id=34)
+kama = Weapon(name='Kama', dmg='1d6', dmg_style='Slashing', weight=2, weapon_type='exotic', cost=2, handed=1, crit_mult='x2', dmg_range=0, weap_id=35)
+nunchaku = Weapon(name='Nunchaku', dmg='1d6', dmg_style='Bludgeoning', weight=2, weapon_type='exotic', cost=2, handed=1, crit_mult='x2', dmg_range=0, weap_id=36)
+sai = Weapon(name='Sai', dmg='1d4', dmg_style='Bludgeoning', weight=1, weapon_type='exotic', cost=1, handed=1, crit_mult='x2', dmg_range=10, weap_id=37)
+siangham = Weapon(name='Siangham', dmg='1d6', dmg_style='Piercing', weight=1, weapon_type='exotic', cost=3, handed=1, crit_mult='x2', dmg_range=0, weap_id=38)
+bastardsword = Weapon(name='Bastard Sword', dmg='1d10', dmg_style='Slashing', weight=6, weapon_type='exotic', cost=35, handed=1, crit_mult='19-20/x2', dmg_range=0, weap_id=39)
+dwarvenwaraxe = Weapon(name='Dwarven Waraxe', dmg='1d10', dmg_style='Slashing', weight=8, weapon_type='exotic', cost=30, handed=1, crit_mult='x3', dmg_range=0, weap_id=40)
+orcdoubleaxe = Weapon(name='Orc Double Axe', dmg='1d8/1d8', dmg_style='Slashing', weight=15, weapon_type='exotic', cost=60, handed=2, crit_mult='x3', dmg_range=0, weap_id=41)
+spikedchain = Weapon(name='Spiked Chain', dmg='2d4', dmg_style='Piercing', weight=10, weapon_type='exotic', cost=25, handed=2, crit_mult='x2', dmg_range=0, weap_id=42)
+direflail = Weapon(name='Dire Flail', dmg='1d8/1d8', dmg_style='Bludgeoning', weight=10, weapon_type='exotic', cost=90, handed=2, crit_mult='x2', dmg_range=0, weap_id=43)
+gnomehookedhammer = Weapon(name='Gnome Hooked Hammer', dmg='1d8/1d6', dmg_style='Bludgeoning/Piercing', weight=6, weapon_type='exotic', cost=20, handed=2, crit_mult='x3/x4', dmg_range=0, weap_id=44)
+twobladedsword = Weapon(name='Two Bladed Sword', dmg='1d8/1d8', dmg_style='Slashing', weight=10, weapon_type='exotic', cost=100, handed=2, crit_mult='19-20/x2', dmg_range=0, weap_id=45)
+dwarvenurgrosh = Weapon(name='Dwarven Urgrosh', dmg='1d8/1d6', dmg_style='Slashing or piercing', weight=12, weapon_type='exotic', cost=50, handed=2, crit_mult='x3', dmg_range=0, weap_id=46)
+bolas = Weapon(name='Bolas', dmg='1d4', dmg_style='Bludgeoning', weight=2, weapon_type='exotic', cost=5, handed=2, crit_mult='x2', dmg_range=10, weap_id=47)
 
 
-sling = Weapon(name='Sling', damage='1d4', dmg_style='Bludgeoning', weight=0, style='simple', cost=0, handed=2, crit_mult='x2', range=50, weapID=0)
-sap = Weapon(name='Sap', damage='1d6', dmg_style='Bludgeoning', weight=2, style='martial', cost=1, handed=1, crit_mult='x2', range=0, weapID=0)
-whip = Weapon(name='Whip', damage='1d3', dmg_style='Slashing', weight=2, style='exotic', cost=1, handed=1, crit_mult='x2', range=0, weapID=0)
+lightcrossbow = Weapon(name='Light Crossbow', dmg='1d8', dmg_style='Piercing', weight=4, weapon_type='simple', cost=35, handed=2, crit_mult='19-20/x2', dmg_range=80, weap_id=1813)
+heavycrossbow = Weapon(name='Heavy Crossbow', dmg='1d10', dmg_style='Piercing', weight=8, weapon_type='simple', cost=50, handed=2, crit_mult='19-20/x2', dmg_range=120, weap_id=1870)
+dart = Weapon(name='Dart', dmg='1d4', dmg_style='Piercing', weight=1, weapon_type='simple', cost=5, handed=2, crit_mult='x2', dmg_range=20, weap_id=0)
+javelin = Weapon(name='Javelin', dmg='1d6', dmg_style='Piercing', weight=2, weapon_type='simple', cost=1, handed=2, crit_mult='x2', dmg_range=30, weap_id=2038)
+longbow = Weapon(name='Longbow', dmg='1d8', dmg_style='Piercing', weight=3, weapon_type='martial', cost=75, handed=2, crit_mult='x3', dmg_range=100, weap_id=1928)
+compositelongbow = Weapon(name='Composite Longbow', dmg='1d8', dmg_style='Piercing', weight=3, weapon_type='martial', cost=100, handed=2, crit_mult='x3', dmg_range=110, weap_id=0)
+shortbow = Weapon(name='Shortbow', dmg='1d6', dmg_style='Piercing', weight=2, weapon_type='martial', cost=30, handed=2, crit_mult='x3', dmg_range=60, weap_id=1813)
+compositeshortbow = Weapon(name='Composite Shortbow', dmg='1d6', dmg_style='Piercing', weight=2, weapon_type='martial', cost=75, handed=2, crit_mult='x3', dmg_range=70, weap_id=0)
+handcrossbow = Weapon(name='Hand Crossbow', dmg='1d4', dmg_style='Piercing', weight=2, weapon_type='exotic', cost=100, handed=2, crit_mult='19-20/x2', dmg_range=30, weap_id=0)
+repeatingheavycrossbow = Weapon(name='Repeating Heavy Crossbow', dmg='1d10', dmg_style='Piercing', weight=12, weapon_type='exotic', cost=400, handed=2, crit_mult='19-20/x2', dmg_range=120, weap_id=0)
+lightrepeatingcrossbow = Weapon(name='Light Repeating Crossbow', dmg='1d8', dmg_style='Piercing', weight=6, weapon_type='exotic', cost=250, handed=2, crit_mult='19-20/x2', dmg_range=80, weap_id=0)
+
+
+sling = Weapon(name='Sling', dmg='1d4', dmg_style='Bludgeoning', weight=0, weapon_type='simple', cost=0, handed=2, crit_mult='x2', dmg_range=50, weap_id=0)
+sap = Weapon(name='Sap', dmg='1d6', dmg_style='Bludgeoning', weight=2, weapon_type='martial', cost=1, handed=1, crit_mult='x2', dmg_range=0, weap_id=0)
+whip = Weapon(name='Whip', dmg='1d3', dmg_style='Slashing', weight=2, weapon_type='exotic', cost=1, handed=1, crit_mult='x2', dmg_range=0, weap_id=0)
 
 
 padded = Armor(name='Padded', weight=10, speed=30, asfc=5, type='light', bonus=1, acp=0, cost=5, max_bonus=8, texture=2289)
