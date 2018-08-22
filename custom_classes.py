@@ -294,10 +294,8 @@ class DialogItem(Entity):
         else:
             self.text = text
         if dialog_opts:
-            first_form = [[j.replace('_', ' ')] for j in textwrap.wrap('@'+' @'.join([i.replace(' ', '_') for i in dialog_opts.keys()]), 22)]
+            self.print_opts = [[j.replace('_', ' ')] for j in textwrap.wrap('@'+' @'.join([i.replace(' ', '_') for i in dialog_opts.keys()]), 22)]
             self.dialog_opts = list(dialog_opts.keys())
-            print(first_form)
-            print(self.dialog_opts)
         else:
             self.dialog_opts = None
         '''
@@ -316,6 +314,6 @@ class DialogItem(Entity):
 # BrokenDoor = DialogItem(sprite=33, text='Anime makes you gay', dialog_opts=[['Whats anime', 'Whys anime'], ['Ya', 'Nah']], speaker='Thine Momther', yx=(73, 27), on_level='Overworld')
 BrokenDoor = DialogItem(sprite=33, text='asdfasdf', speaker='Thine Momther', yx=(73, 27), on_level='Overworld')
 BrDo2 = DialogItem(sprite=33, text='asdfasdf',
-                   dialog_opts={"What this?": BrokenDoor, "Why that?": BrokenDoor, "Who there?": BrokenDoor, "When it?": BrokenDoor, "How that?": BrokenDoor},
+                   dialog_opts={"What this?": BrokenDoor, "Why that?": BrokenDoor, "Who there?": BrokenDoor, "When it?": BrokenDoor},
                    speaker='Thine Momther', yx=(73, 27), on_level='Overworld')
 

@@ -37,7 +37,7 @@ class Game(arcade.Window):
                 if self.p.state is 'Inventory':
                     self.gen_tile_array(raw_maps['inventory'][self.inventory_screen], r_c=(row, col))
         if self.p.state is 'Talking':
-            self.gen_text(txt=self.cur_text.text, speaker=self.cur_text.speaker, opts=self.cur_text.dialog_opts)
+            self.gen_text(txt=self.cur_text.text, speaker=self.cur_text.speaker, opts=self.cur_text.print_opts)
         if self.p.state is 'Inventory':
             self.gen_inv()
         if self.p.state is 'Walking':
