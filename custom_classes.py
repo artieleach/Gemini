@@ -5,7 +5,6 @@ import tmx
 import os
 import time
 import textwrap
-from collections import defaultdict
 from PIL import Image
 
 wait_time = 0.01
@@ -27,14 +26,22 @@ char_width = {' ': 32, '!': 16, '"': 32, '#': 48, '$': 32, '%': 32, '&': 48, "'"
               '`': 8,  'a': 32, 'b': 32, 'c': 32, 'd': 32, 'e': 32, 'f': 32, 'g': 32, 'h': 32, 'i': 16, 'j': 32, 'k': 32, 'l': 24, 'm': 48, 'n': 32, 'o': 32,
               'p': 32, 'q': 32, 'r': 32, 's': 32, 't': 32, 'u': 32, 'v': 32, 'w': 48, 'x': 32, 'y': 32, 'z': 32, '{': 32, '|': 16, '}': 32, '~': 32}
 
+
+class Entity:
+    def __init__(self, yx=(0, 0), name=None, sprite=-1):
+        self.y, self.x = yx
+        self.name = name
+        self.sprite = sprite
+
+
 for file in map_dir:  # Some layers need copies, and i figure having backups cant hurt
     map_file = tmx.TileMap.load('./Maps/{}'.format(file))
     file_name = file.split('.')[0]
     raw_maps[file_name] = {}
     for layer in map_file.layers:
         map_data = []
-        raw_maps[file_name]['Sprite'] = np.zeros(shape=(map_file.width, map_file.height), dtype=int)
-        raw_maps[file_name]['Sprite Copy'] = np.zeros(shape=(map_file.width, map_file.height), dtype=int)
+        raw_maps[file_name]['Sprite'] = np.zeros(shape=(map_file.width, map_file.height), dtype=Entity)
+        raw_maps[file_name]['Sprite Copy'] = np.zeros(shape=(map_file.width, map_file.height), dtype=Entity)
         for tile in layer.tiles:
             if tile.gid != 0:
                 map_data.append(tile.gid-1)
@@ -128,12 +135,6 @@ def roll_dice(s='1d'):
     return int(s != '1d') * sum(sorted(list(np.random.randint(1, d[1])
                                             for _ in range(d[0])))[d[-1] * (len(d) > 2):]) or np.random.randint(0, 1)
 
-
-class Entity:
-    def __init__(self, yx=(0, 0), name=None, sprite=-1):
-        self.y, self.x = yx
-        self.name = name
-        self.sprite = sprite
 
 
 class Player(Entity):
@@ -285,17 +286,36 @@ class Gold:
 
 
 class DialogItem(Entity):
-    def __init__(self, text=None, speaker=None, dialog_opts=None, yx=(0, 0), on_level=None):
-        Entity.__init__(self, yx)
+    def __init__(self, text=None, speaker=None, dialog_opts=None, yx=(0, 0), on_level=None, sprite=-1):
+        Entity.__init__(self, yx=yx, sprite=sprite)
         self.speaker = speaker
         if type(text) is str:
             self.text = textwrap.wrap(text, 22)
         else:
             self.text = text
-        if type(dialog_opts) is list:
+        if dialog_opts:
+            first_form = [[j.replace('_', ' ')] for j in textwrap.wrap('@'+' @'.join([i.replace(' ', '_') for i in dialog_opts.keys()]), 22)]
+            self.dialog_opts = list(dialog_opts.keys())
+            print(first_form)
+            print(self.dialog_opts)
+        else:
+            self.dialog_opts = None
+        '''
+        if type(dialog_opts) is dict:
             if type(dialog_opts[0]) is list:
                 self.dialog_opts = [[' {} '.format(opt) for opt in lin] for lin in dialog_opts]
             else:
                 self.dialog_opts = [[' {} '.format(opt)] for opt in dialog_opts]
         else:
-            self.dialog_opts = dialog_opts
+            self.dialog_opts = dialog_opts'''
+
+    def new_opt(self, newopt):
+        pass
+
+
+# BrokenDoor = DialogItem(sprite=33, text='Anime makes you gay', dialog_opts=[['Whats anime', 'Whys anime'], ['Ya', 'Nah']], speaker='Thine Momther', yx=(73, 27), on_level='Overworld')
+BrokenDoor = DialogItem(sprite=33, text='asdfasdf', speaker='Thine Momther', yx=(73, 27), on_level='Overworld')
+BrDo2 = DialogItem(sprite=33, text='asdfasdf',
+                   dialog_opts={"What this?": BrokenDoor, "Why that?": BrokenDoor, "Who there?": BrokenDoor, "When it?": BrokenDoor, "How that?": BrokenDoor},
+                   speaker='Thine Momther', yx=(73, 27), on_level='Overworld')
+

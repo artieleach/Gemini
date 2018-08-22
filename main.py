@@ -13,15 +13,19 @@ class Game(arcade.Window):
         self.p = Player()
         self.actor1 = Actor(yx=(61, 26), name='Goast', sprite=908, disposition='Friendly', target_distance=1)
         self.actor2 = Actor(yx=(71, 26), name='Victor', sprite=1780, disposition='Aggressive', target_distance=6)
-        self.actor_list = [self.actor1, self.actor2]
+        self.actor_list = [self.actor1, self.actor2, BrDo2]
 
     def draw_base(self):
         arcade.start_render()
         for row in range(ROWS):
             for col in range(COLS+1):
-                for cur_layer in ['Back', 'Mid', 'Sprite', 'Fore']:
+                for cur_layer in ['Back', 'Mid']:
                     if raw_maps[current_map][cur_layer][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]:  # only draw tiles where there are tiles
                         arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map][cur_layer][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]])
+                if raw_maps[current_map]['Sprite'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]:
+                    arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map]['Sprite'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2].sprite])
+                if raw_maps[current_map]['Fore'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]:  # only draw tiles where there are tiles
+                    arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map]['Fore'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]])
 
     def on_draw(self):
         self.add_sprites()
@@ -184,8 +188,8 @@ class Game(arcade.Window):
             if key in movemnet_keys['Inv']:
                 self.switch_state('Inventory')
             if key in movemnet_keys['Context']:
-                if raw_maps[current_map]['Sprite'][self.p.y+1, self.p.x] in nodes:
-                    self.cur_text = nodes[raw_maps[current_map]['Sprite'][self.p.y+1, self.p.x]]
+                if type(raw_maps[current_map]['Sprite'][self.p.y+1, self.p.x]) is DialogItem:
+                    self.cur_text = raw_maps[current_map]['Sprite'][self.p.y+1, self.p.x]
                     self.switch_state('Talking')
         elif self.p.state is 'Talking':
             if self.cur_text.dialog_opts:
@@ -280,24 +284,27 @@ class Game(arcade.Window):
         raw_maps[current_map]['Sprite'][:] = raw_maps[current_map]['Sprite Copy']
         raw_maps[current_map]['Collision'][:] = raw_maps[current_map]['Collision Copy']
         for actor in self.actor_list:
-            raw_maps[current_map]['Sprite'][actor.y, actor.x] = actor.sprite
+            raw_maps[current_map]['Sprite'][actor.y, actor.x] = actor
             # raw_maps[current_map]['Collision'][actor.y, actor.x] = 1
         else:
-            raw_maps[current_map]['Sprite'][self.p.y, self.p.x] = self.p.sprite
+            raw_maps[current_map]['Sprite'][self.p.y, self.p.x] = self.p
 
     def game_step(self):
         for act in self.actor_list:
-            if act.disposition == 'Friendly':
-                enemy_list = [i for i in self.actor_list if i.disposition == 'Aggressive']
-                if enemy_list:
-                    act.target_distance = 1
-                    act.move_me((enemy_list[0].y, enemy_list[0].x))
-                else:
-                    act.target_distance = 2
-                    act.move_me((self.p.y, self.p.x))
-            elif act.disposition == 'Aggressive':
-                act.move_me((self.p.y, self.p.x))
-
+            if type(act) is Actor:
+                try:
+                    if act.disposition == 'Friendly':
+                        enemy_list = [i for i in self.actor_list if i.disposition == 'Aggressive']
+                        if enemy_list:
+                            act.target_distance = 1
+                            act.move_me((enemy_list[0].y, enemy_list[0].x))
+                        else:
+                            act.target_distance = 2
+                            act.move_me((self.p.y, self.p.x))
+                    elif act.disposition == 'Aggressive':
+                        act.move_me((self.p.y, self.p.x))
+                except AttributeError:
+                    pass
 
 def main():
     Game(*sc)

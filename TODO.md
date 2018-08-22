@@ -8,3 +8,6 @@ part unless the player is nearby? we'll see.
 * Turn the sprite layer into one just for objects, change dialog items to be actors who dont move, 
 for dialog opts, use a defaultdict to easily turn the keys into a list.
 * instead of manually making an 800% version of the tilesets, have the image library do that.
+
+currently, the string formatting for dialog options is being done within the dialog object, but it may
+be better to do that in the renderer
