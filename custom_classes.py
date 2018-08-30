@@ -33,6 +33,10 @@ class Entity:
         self.name = name
         self.sprite = sprite
 
+    @staticmethod
+    def name_list(self, *args):
+        return [i.name for i in args]
+
 
 for file in map_dir:  # Some layers need copies, and i figure having backups cant hurt
     map_file = tmx.TileMap.load('./Maps/{}'.format(file))
@@ -136,42 +140,6 @@ def roll_dice(s='1d'):
                                             for _ in range(d[0])))[d[-1] * (len(d) > 2):]) or np.random.randint(0, 1)
 
 
-
-class Player(Entity):
-    def __init__(self):
-        Entity.__init__(self, yx=(71, 26), name=Player, sprite=1767)
-        self.gold = Gold(100)
-        self.stats = {
-            'Str': roll_dice('4d6d1'),
-            'Dex': roll_dice('4d6d1'),
-            'Int': roll_dice('4d6d1'),
-            'Wil': roll_dice('4d6d1'),
-            'Per': roll_dice('4d6d1'),
-            'HP': 8,
-            'FP': 0,
-            'XP': 0
-        }
-        self.inventory = []
-        self.equipped = {'Head': None, 'Left Hand': None, 'Right Hand': None, 'Feet': None, 'Chest': None, 'Legs': None, 'Rings': [], }
-        self.state = 'Walking'
-
-    @staticmethod
-    def get_bag(bag, is_list=True):
-        if is_list:
-            return [['  {} '.format(i.name)] for i in bag]
-        else:
-            return [i.name for i in bag]
-
-    def equip_stats(self):
-        return [[str(i)] for i in self.equipped]
-
-    def get_stats(self):
-        return 'Str:{Str:02d} Dex:{Dex:02d} Int:{Int:02d} Wil:{Wil:02d} Per:{Per:02d}'.format(**self.stats).split()
-
-    def get_points(self):
-        return '{HP:02d} {FP:02d}'.format(**self.stats).split()
-
-
 class Actor(Entity):
     def __init__(self, yx, name, sprite, disposition, target_distance):
         Entity.__init__(self, yx, name, sprite)
@@ -195,12 +163,10 @@ class Actor(Entity):
 
 
 class Item(Entity):
-    def __init__(self, yx, name, cost, weight, texture, flavor_text=None):
-        Entity.__init__(self, yx, name)
-        self.name = name
+    def __init__(self, name, cost, weight, sprite, flavor_text=None):
+        Entity.__init__(self, name=name, sprite=sprite)
         self.cost = cost
         self.weight = weight
-        self.texture = texture
         self.flavor_text = flavor_text
         self.actions = ['Look', 'Drop']
 
@@ -212,14 +178,14 @@ class Item(Entity):
 
 
 class EquipmentItem(Item):
-    def __init__(self, name, cost, weight, texture):
-        Item.__init__(self, yx=(0, 0), name=name, cost=cost, weight=weight, texture=texture)
+    def __init__(self, name, cost, weight, sprite):
+        Item.__init__(self, name=name, cost=cost, weight=weight, sprite=sprite)
         self.actions.append('Equip')
 
 
 class Armor(EquipmentItem):
-    def __init__(self, name, cost, weight, speed, asfc, armor_type, bonus, acp, max_bonus, texture):
-        EquipmentItem.__init__(self, name, cost, weight, texture)
+    def __init__(self, name, cost, weight, speed, asfc, armor_type, bonus, acp, max_bonus, sprite):
+        EquipmentItem.__init__(self, name, cost, weight, sprite)
         self.armor_type = armor_type
         self.speed = speed
         self.asfc = asfc
@@ -294,7 +260,6 @@ class DialogItem(Entity):
         else:
             self.text = text
         if dialog_opts:
-            self.print_opts = [[j.replace('_', ' ')] for j in textwrap.wrap('@'+' @'.join([i.replace(' ', '_') for i in dialog_opts.keys()]), 22)]
             self.dialog_opts = list(dialog_opts.keys())
         else:
             self.dialog_opts = None
@@ -317,3 +282,34 @@ BrDo2 = DialogItem(sprite=33, text='asdfasdf',
                    dialog_opts={"What this?": BrokenDoor, "Why that?": BrokenDoor, "Who there?": BrokenDoor, "When it?": BrokenDoor},
                    speaker='Thine Momther', yx=(73, 27), on_level='Overworld')
 
+
+class Player(Entity):
+    def __init__(self):
+        Entity.__init__(self, yx=(71, 26), name=Player, sprite=1767)
+        self.gold = Gold(100)
+        self.stats = {
+            'Str': roll_dice('4d6d1'),
+            'Dex': roll_dice('4d6d1'),
+            'Int': roll_dice('4d6d1'),
+            'Wil': roll_dice('4d6d1'),
+            'Per': roll_dice('4d6d1'),
+            'HP': 8,
+            'FP': 0,
+            'XP': 0
+        }
+        self.inventory = []
+        self.equipped = {'Head': None, 'Left Hand': None, 'Right Hand': None, 'Feet': None, 'Chest': None, 'Legs': None, 'Rings': [], }
+        self.state = 'Walking'
+
+    @staticmethod
+    def get_bag(bag):
+        return [i.name for i in bag]
+
+    def equip_stats(self):
+        return [[str(i)] for i in self.equipped]
+
+    def get_stats(self):
+        return 'Str:{Str:02d} Dex:{Dex:02d} Int:{Int:02d} Wil:{Wil:02d} Per:{Per:02d}'.format(**self.stats).split()
+
+    def get_points(self):
+        return '{HP:02d} {FP:02d}'.format(**self.stats).split()

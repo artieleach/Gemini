@@ -1,4 +1,4 @@
-from custom_classes import *
+from items import *
 
 
 class Game(arcade.Window):
@@ -14,6 +14,8 @@ class Game(arcade.Window):
         self.actor1 = Actor(yx=(61, 26), name='Goast', sprite=908, disposition='Friendly', target_distance=1)
         self.actor2 = Actor(yx=(71, 26), name='Victor', sprite=1780, disposition='Aggressive', target_distance=6)
         self.actor_list = [self.actor1, self.actor2, BrDo2]
+        self.p.inventory.append(scilla)
+        self.cur_health = [item for sublist in [[1745] * (self.p.stats['HP'] // 2), [1746] * (self.p.stats['HP'] % 2 == 1)] for item in sublist]
 
     def draw_base(self):
         arcade.start_render()
@@ -24,7 +26,7 @@ class Game(arcade.Window):
                         arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map][cur_layer][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]])
                 if raw_maps[current_map]['Sprite'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]:
                     arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map]['Sprite'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2].sprite])
-                if raw_maps[current_map]['Fore'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]:  # only draw tiles where there are tiles
+                if raw_maps[current_map]['Fore'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]:
                     arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map]['Fore'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]])
 
     def on_draw(self):
@@ -37,13 +39,12 @@ class Game(arcade.Window):
                 if self.p.state is 'Inventory':
                     self.gen_tile_array(raw_maps['inventory'][self.inventory_screen], r_c=(row, col))
         if self.p.state is 'Talking':
-            self.gen_text(txt=self.cur_text.text, speaker=self.cur_text.speaker, opts=self.cur_text.print_opts)
+            self.gen_text(txt=self.cur_text.text, speaker=self.cur_text.speaker, opts=self.cur_text.dialog_opt)
         if self.p.state is 'Inventory':
             self.gen_inv()
         if self.p.state is 'Walking':
-            cur_health = [item for sublist in [[1745]*(self.p.stats['HP'] // 2), [1746]*(self.p.stats['HP'] % 2 == 1)] for item in sublist]
             for col in range(-(-self.p.stats['HP'] // 2)):  # weird ass way of getting how many heart containers to draw
-                self.gen_lone_tile(cur_health[col], (0.5+col, 8.5))
+                self.gen_lone_tile(self.cur_health[col], (0.5+col, 8.5))
 
     def switch_state(self, newstate):
         self.cur_opt = [0, 0, 0]
@@ -98,11 +99,11 @@ class Game(arcade.Window):
             self.gen_lone_tile(i+1820, (1.5 + i*2, 8))
         if self.inventory_screen == 0:
             for i in range(len(self.p.inventory[self.cur_opt[2]:self.cur_opt[2] + 6 or -1])):
-                self.gen_lone_tile(self.p.inventory[i + self.cur_opt[2]].texture, yx=(2, 6.5 - i))
+                self.gen_lone_tile(self.p.inventory[i + self.cur_opt[2]].sprite, yx=(2, 6.5 - i))
             if not self.selected:
                 self.gen_text(opts=self.p.get_bag(self.p.inventory)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 1.5))
             else:
-                self.gen_text(txt=self.p.get_bag(self.p.inventory, False)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 2.5))
+                self.gen_text(txt=self.p.name_list(self.p.inventory)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 2.5))
                 self.gen_sub_menu()
         elif self.inventory_screen == 1:
             pass
@@ -112,7 +113,7 @@ class Game(arcade.Window):
             if not self.selected:
                 self.gen_text(opts=self.p.equip_stats()[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 1.5))
             else:
-                self.gen_text(txt=self.p.get_bag(self.p.equipped, False)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 2.5))
+                self.gen_text(txt=self.p.get_bag(self.p.equipped)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 2.5))
                 self.gen_sub_menu()'''
         elif self.inventory_screen == 2:
             self.gen_text(self.p.get_stats(), yx=(6.5, 1))
@@ -290,6 +291,7 @@ class Game(arcade.Window):
             raw_maps[current_map]['Sprite'][self.p.y, self.p.x] = self.p
 
     def game_step(self):
+        cur_health = [item for sublist in [[1745] * (self.p.stats['HP'] // 2), [1746] * (self.p.stats['HP'] % 2 == 1)] for item in sublist]
         for act in self.actor_list:
             if type(act) is Actor:
                 try:
@@ -305,6 +307,7 @@ class Game(arcade.Window):
                         act.move_me((self.p.y, self.p.x))
                 except AttributeError:
                     pass
+
 
 def main():
     Game(*sc)
