@@ -39,7 +39,7 @@ class Game(arcade.Window):
                 if self.p.state is 'Inventory':
                     self.gen_tile_array(raw_maps['inventory'][self.inventory_screen], r_c=(row, col))
         if self.p.state is 'Talking':
-            self.gen_text(txt=self.cur_text.text, speaker=self.cur_text.speaker, opts=self.cur_text.dialog_opt)
+            self.gen_text(txt=self.cur_text.text, speaker=self.cur_text.speaker, opts=self.cur_text.dialog_opts)
         if self.p.state is 'Inventory':
             self.gen_inv()
         if self.p.state is 'Walking':
@@ -61,13 +61,13 @@ class Game(arcade.Window):
 
     def cursor(self, list_locs):
         try:
-            list_locs[self.cur_opt[1], self.cur_opt[0]]
+            list_locs[self.cur_opt[1]]
         except IndexError:
-            self.cur_opt = [0, 0, 0]
-        highlight = list_locs[self.cur_opt[1], self.cur_opt[0]]
-        arcade.draw_texture_rectangle(highlight[0], highlight[1], WIDTH, HEIGHT, tile_set[1480])
+            self.cur_opt = [0, 0]
+        highlight = list_locs[self.cur_opt[1]]
+        arcade.draw_texture_rectangle(highlight[0]*WIDTH-32, highlight[1]*HEIGHT+32, WIDTH, HEIGHT, tile_set[1480])
 
-    def gen_text(self, txt=None, speaker=None, opts=None, yx=(2.25, 1)):
+    def gen_text(self, txt=None, speaker=None, opts=None, yx=(2.25, 1), len_display=3):
         y, x = yx
         if speaker:
             width_sum = 0
@@ -75,15 +75,13 @@ class Game(arcade.Window):
                 width_sum += char_width[speaker[charpos-1]]
                 arcade.draw_texture_rectangle(width_sum+40, 216, WIDTH, HEIGHT, font[ord(char)])
         if opts:
-            cursor_locs = np.zeros((len(opts), len(opts[0]), 2), dtype=int)
+            cursor_locs = np.zeros((len(opts), 2), dtype=int)
             for itempos, item in enumerate(opts):
                 for optpos, sub in enumerate(item):
-                    cursor_locs[itempos, optpos] = [x + len(''.join(opts[itempos][:optpos])), y - itempos - int(txt is not None)]
+                    cursor_locs[itempos] = [x + len(''.join(opts[itempos][:optpos])), y - itempos - int(txt is not None)]
                     out = ''.join(opts[itempos])
                     width_sum = 0
                     for charpos, char in enumerate(out):
-                        if charpos is 0:
-                            cursor_locs[itempos, optpos] = [width_sum + x * WIDTH - 32, (y - itempos - int(txt is not None)) * HEIGHT]
                         width_sum += char_width[out[charpos-1]]
                         arcade.draw_texture_rectangle(width_sum + x * WIDTH, (y - itempos - int(txt is not None)) * HEIGHT, WIDTH, HEIGHT, font[ord(char)])
             self.cursor(cursor_locs)
@@ -98,7 +96,7 @@ class Game(arcade.Window):
         for i in range(4):
             self.gen_lone_tile(i+1820, (1.5 + i*2, 8))
         if self.inventory_screen == 0:
-            for i in range(len(self.p.inventory[self.cur_opt[2]:self.cur_opt[2] + 6 or -1])):
+            for i in range(len(self.p.inventory[self.cur_opt[2]:self.cur_opt[2] + 6 or -1])):  # this must be zero long to recieve an error
                 self.gen_lone_tile(self.p.inventory[i + self.cur_opt[2]].sprite, yx=(2, 6.5 - i))
             if not self.selected:
                 self.gen_text(opts=self.p.get_bag(self.p.inventory)[self.cur_opt[2]:self.cur_opt[2] + 6 or -1], yx=(6.5, 1.5))
@@ -203,7 +201,7 @@ class Game(arcade.Window):
                 if key in movemnet_keys['Down'] and self.cur_opt[1] < len(self.cur_text.dialog_opts)-1:
                     self.cur_opt[1] += 1
                 if key in movemnet_keys['Context']:
-                    print(self.cur_text.dialog_opts[self.cur_opt[1]][self.cur_opt[0]])
+                    print(self.cur_text.dialog_opts[self.cur_opt[1]])
             if key in movemnet_keys['Context']:
                 if self.cur_opt[2] < len(self.cur_text.text) - 2:
                     self.cur_opt[2] += 1
