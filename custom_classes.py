@@ -16,7 +16,8 @@ sc = SCREEN_WIDTH, SCREEN_HEIGHT = (WIDTH * COLS, HEIGHT * ROWS)
 current_map = 'overworld'
 raw_maps = {}
 loc_array = {}
-options_menu = [['Settings'], ['Gameplay'], ['Exit']]
+options_menu = ['Settings', 'Gameplay', 'Exit']
+
 map_dir = [f for f in os.listdir('./Maps') if os.path.isfile(os.path.join('./Maps', f))]
 img_dir = [f for f in os.listdir('./Images') if os.path.isfile(os.path.join('./Images', f))]
 char_width = {' ': 32, '!': 16, '"': 32, '#': 48, '$': 32, '%': 32, '&': 48, "'": 16, '(': 24, ')': 24, '*': 32, '+': 32, ',': 16, '-': 32, '.': 16, '/': 32,
@@ -35,6 +36,7 @@ class Entity:
 
     @staticmethod
     def name_list(self, *args):
+        print(args)
         return [i.name for i in args]
 
 
@@ -174,7 +176,7 @@ class Item(Entity):
         return DialogItem(text=self.flavor_text, speaker=self.name)
 
     def get_actions(self):
-        return [[' {} '.format(i)] for i in self.actions]
+        return [' {} '.format(i) for i in self.actions]
 
 
 class EquipmentItem(Item):
