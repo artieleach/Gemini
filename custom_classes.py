@@ -35,9 +35,11 @@ class Entity:
         self.sprite = sprite
 
     @staticmethod
-    def name_list(self, *args):
-        print(args)
-        return [i.name for i in args]
+    def name_list(in_list):
+        try:
+            return [i.name for i in in_list]
+        except AttributeError:
+            raise('{} does not have a name attribute'.format(in_list))
 
 
 for file in map_dir:  # Some layers need copies, and i figure having backups cant hurt

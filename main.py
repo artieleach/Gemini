@@ -70,7 +70,6 @@ class Game(arcade.Window):
         arcade.draw_texture_rectangle(x * WIDTH - 32, (y - list_locs[self.cur_opt[0]]) * HEIGHT, WIDTH, HEIGHT, tile_set[1480])
 
     def gen_text(self, text=None, speaker=None, opts=None, yx=(2.25, 1), len_display=3):
-        print(text, opts)
         y, x = yx
         if speaker:
             width_sum = 0
@@ -102,9 +101,9 @@ class Game(arcade.Window):
             except IndexError:
                 pass
             if not self.cur_opt[2]:
-                self.gen_text(opts=self.p.name_list(self.p.inventory)[self.cur_opt[1]:self.cur_opt[1] + 6 or -1], yx=(6.5, 1.5), len_display=6)
+                self.gen_text(opts=['  {}'.format(i) for i in self.p.name_list(self.p.inventory)[self.cur_opt[1]:self.cur_opt[1] + 6 or -1]], yx=(6.5, 1.5), len_display=6)
             else:
-                self.gen_text(text=self.p.name_list(self.p.inventory)[self.cur_opt[1]:self.cur_opt[1] + 6 or -1], yx=(6.5, 2.5), len_display=6)
+                self.gen_text(text=['  {}'.format(i) for i in self.p.name_list(self.p.inventory)[self.cur_opt[1]:self.cur_opt[1] + 6 or -1]], yx=(6.5, 1.5), len_display=6)
                 self.gen_sub_menu()
         elif self.inventory_screen == 1:
             pass
