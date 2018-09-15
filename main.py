@@ -14,8 +14,8 @@ class Game(arcade.Window):
         # the definitions below are just for testing
         self.actor1 = Actor(yx=(61, 26), name='Goast', sprite=908, disposition='Friendly', target_distance=1)
         self.actor2 = Actor(yx=(71, 26), name='Victor', sprite=1780, disposition='Aggressive', target_distance=6)
-        self.actor_list = [self.actor1, self.actor2, BrDo2]
-        self.p.inventory.append(scilla)
+        self.actor_list = [self.actor1, self.actor2, BrDo2, test_dia]
+        self.p.inventory = [scilla, rose, violet, tigerseye, scilla, rose, violet, tigerseye]
         self.cur_health = [item for sublist in [[1745] * (self.p.stats['HP'] // 2), [1746] * (self.p.stats['HP'] % 2 == 1)] for item in sublist]
 
     def draw_base(self):
@@ -23,13 +23,17 @@ class Game(arcade.Window):
         for row in range(ROWS):
             for col in range(COLS + 1):
                 if raw_maps[current_map]['Back'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]:
-                    arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map]['Back'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]])
+                    arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set
+                    [raw_maps[current_map]['Back'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]])
                 if raw_maps[current_map]['Mid'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]:
-                    arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map]['Mid'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]])
+                    arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set
+                    [raw_maps[current_map]['Mid'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]])
                 if raw_maps[current_map]['Sprite'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]:
-                    arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map]['Sprite'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2].sprite])
+                    arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set
+                    [raw_maps[current_map]['Sprite'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2].sprite])
                 if raw_maps[current_map]['Fore'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]:
-                    arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map]['Fore'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]])
+                    arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set
+                    [raw_maps[current_map]['Fore'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]])
 
     def on_draw(self):
         self.add_sprites()
@@ -37,7 +41,7 @@ class Game(arcade.Window):
         for row in range(ROWS):
             for col in range(COLS):
                 if self.p.state == 'Talking':
-                    self.gen_tile_array(raw_maps['dialog'], r_c=(row, col - 1), yx=(0, 0.5))
+                    self.gen_tile_array(raw_maps['dialog'], r_c=(row, col), yx=(0, 0.5))
                 elif self.p.state == 'Inventory':
                     self.gen_tile_array(raw_maps['inventory'][self.inventory_screen], r_c=(row, col))
         if self.p.state is 'Talking':
@@ -85,7 +89,7 @@ class Game(arcade.Window):
                     arcade.draw_texture_rectangle(width_sum + x * WIDTH, (y - itempos - int(text is not None)) * HEIGHT, WIDTH, HEIGHT, font[ord(char)])
             self.cursor(cursor_locs, yx)
         if text:
-            for linepos, line in enumerate(text[self.cur_opt[1]:self.cur_opt[0]+len_display]):
+            for linepos, line in enumerate(text[self.cur_opt[1]:self.cur_opt[1]+len_display]):
                 width_sum = 0
                 for charpos, char in enumerate(text[linepos + self.cur_opt[1]]):
                     width_sum += char_width[text[linepos + self.cur_opt[1]][charpos - 1]]
@@ -101,9 +105,9 @@ class Game(arcade.Window):
             except IndexError:
                 pass
             if not self.cur_opt[2]:
-                self.gen_text(opts=['  {}'.format(i) for i in self.p.name_list(self.p.inventory)[self.cur_opt[1]:self.cur_opt[1] + 6 or -1]], yx=(6.5, 1.5), len_display=6)
+                self.gen_text(opts=['  {}'.format(i) for i in self.p.name_list(self.p.inventory)], yx=(6.5, 1.5), len_display=6)
             else:
-                self.gen_text(text=['  {}'.format(i) for i in self.p.name_list(self.p.inventory)[self.cur_opt[1]:self.cur_opt[1] + 6 or -1]], yx=(6.5, 1.5), len_display=6)
+                self.gen_text(text=['  {}'.format(i) for i in self.p.name_list(self.p.inventory)], yx=(6.5, 1.5), len_display=6)
                 self.gen_sub_menu()
         elif self.inventory_screen == 1:
             pass
@@ -119,7 +123,7 @@ class Game(arcade.Window):
         self.gen_text(opts=self.cur_item.get_actions(), yx=(6, 11))
 
     @staticmethod
-    def gen_tile_array(in_array, r_c, yx=(0, 0)):  # Row/Col correspond to which tile is drawn, X/Y correspond to how much each tile should be shifted over.
+    def gen_tile_array(in_array, r_c, yx=(0, 0)):  # Row/Col = which tile is drawn, X/Y = how much each tile should be shifted over.
         row, col, = r_c
         y, x = yx
         arcade.draw_texture_rectangle(HEIGHT * (y + col), WIDTH * (x + row), WIDTH, HEIGHT, tile_set[in_array[r_c]])
@@ -143,8 +147,9 @@ class Game(arcade.Window):
                 else:
                     if self.cur_opt[0] < 5:
                         self.cur_opt[0] += 1
-                    elif sum(self.cur_opt) + 1 < len(self.p.inventory):
-                        self.cur_opt[0] += 1
+                    elif sum(self.cur_opt[:-1]) + 1 < len(self.p.inventory):
+                        self.cur_opt[1] += 1
+                        print(self.cur_opt, len(self.p.inventory))
             if key in movemnet_keys['Up']:
                 if self.cur_opt[0] > 0:
                     self.cur_opt[0] -= 1
@@ -190,13 +195,19 @@ class Game(arcade.Window):
                     self.cur_opt[0] += 1
                 if key in movemnet_keys['Left'] and self.cur_opt[0] > 0:
                     self.cur_opt[0] -= 1
-                if key in movemnet_keys['Up'] and self.cur_opt[0] > 0:
-                    self.cur_opt[0] -= 1
-                if key in movemnet_keys['Down'] and self.cur_opt[0] < len(self.cur_text.dialog_opts) - 1:
-                    self.cur_opt[0] += 1
+                if key in movemnet_keys['Up']:
+                    if self.cur_opt[0] > 0:
+                        self.cur_opt[0] -= 1
+                    elif self.cur_opt[1] > 0:
+                        self.cur_opt[1] -=1
+                if key in movemnet_keys['Down']:
+                    if self.cur_opt[0] < 2:
+                        self.cur_opt[0] += 1
+                    elif sum(self.cur_opt[:-1]) < len(self.cur_text.dialog_opts) - 1:
+                        self.cur_opt[1] += 1
                 if key in movemnet_keys['Context']:
-                    print(self.cur_text.dialog_opts[self.cur_opt[1]])
-            if key in movemnet_keys['Context']:
+                    print(self.cur_text.dialog_opts[sum(self.cur_opt[:-1])])
+            if key in movemnet_keys['Context'] and self.cur_text.text:
                 if self.cur_opt[1] < len(self.cur_text.text) - 2:
                     self.cur_opt[1] += 1
                 else:

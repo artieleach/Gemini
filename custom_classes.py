@@ -1,32 +1,4 @@
-import arcade
-import numpy as np
-import heapq
-import tmx
-import os
-import time
-import textwrap
-from PIL import Image
-
-wait_time = 0.01
-
-rc = ROWS, COLS = (9, 16)
-wh = WIDTH, HEIGHT = (64, 64)
-sc = SCREEN_WIDTH, SCREEN_HEIGHT = (WIDTH * COLS, HEIGHT * ROWS)
-
-current_map = 'overworld'
-raw_maps = {}
-loc_array = {}
-options_menu = ['Settings', 'Gameplay', 'Exit']
-
-map_dir = [f for f in os.listdir('./Maps') if os.path.isfile(os.path.join('./Maps', f))]
-img_dir = [f for f in os.listdir('./Images') if os.path.isfile(os.path.join('./Images', f))]
-char_width = {' ': 32, '!': 16, '"': 32, '#': 48, '$': 32, '%': 32, '&': 48, "'": 16, '(': 24, ')': 24, '*': 32, '+': 32, ',': 16, '-': 32, '.': 16, '/': 32,
-              '0': 32, '1': 32, '2': 32, '3': 32, '4': 32, '5': 32, '6': 32, '7': 32, '8': 32, '9': 32, ':': 16, ';': 16, '<':  32, '=': 32, '>': 32, '?': 32,
-              '@': 48, 'A': 32, 'B': 32, 'C': 32, 'D': 32, 'E': 32, 'F': 32, 'G': 32, 'H': 32, 'I': 32, 'J': 32, 'K': 32, 'L': 32, 'M': 48, 'N': 32, 'O': 32,
-              'P': 32, 'Q': 32, 'R': 32, 'S': 32, 'T': 32, 'U': 32, 'V': 32, 'W': 48, 'X': 32, 'Y': 32, 'Z': 32, '[': 24, '\\': 32, ']': 24, '^': 32, '_': 32,
-              '`': 8,  'a': 32, 'b': 32, 'c': 32, 'd': 32, 'e': 32, 'f': 32, 'g': 32, 'h': 32, 'i': 16, 'j': 32, 'k': 32, 'l': 24, 'm': 48, 'n': 32, 'o': 32,
-              'p': 32, 'q': 32, 'r': 32, 's': 32, 't': 32, 'u': 32, 'v': 32, 'w': 48, 'x': 32, 'y': 32, 'z': 32, '{': 32, '|': 16, '}': 32, '~': 32}
-
+from init import *
 
 class Entity:
     def __init__(self, yx=(0, 0), name=None, sprite=-1):
@@ -40,7 +12,6 @@ class Entity:
             return [i.name for i in in_list]
         except AttributeError:
             raise('{} does not have a name attribute'.format(in_list))
-
 
 for file in map_dir:  # Some layers need copies, and i figure having backups cant hurt
     map_file = tmx.TileMap.load('./Maps/{}'.format(file))
@@ -63,31 +34,6 @@ for file in map_dir:  # Some layers need copies, and i figure having backups can
                 raw_maps[file_name]['{} Copy'.format(layer.name)] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
         else:
             raw_maps[file_name] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
-
-for img in img_dir:
-    img_name = img.split('.')[0]
-    cur_img = Image.open('./Images/{}'.format(img))
-    loc_array[img_name] = [[j, i, WIDTH, HEIGHT] for i in range(0, cur_img.size[1], WIDTH) for j in range(0, cur_img.size[0], HEIGHT)]
-    cur_img.close()
-
-tile_set = arcade.draw_commands.load_textures('./Images/Tile.png', loc_array['Tile'])
-font = arcade.draw_commands.load_textures('./Images/Font.png', loc_array['Font'])
-
-movemnet_keys = {
-    'Up': (arcade.key.W, arcade.key.UP, arcade.key.NUM_8, arcade.key.NUM_UP),
-    'Down': (arcade.key.S, arcade.key.DOWN, arcade.key.NUM_2, arcade.key.NUM_DOWN),
-    'Left': (arcade.key.A, arcade.key.LEFT, arcade.key.NUM_4, arcade.key.NUM_LEFT),
-    'Right': (arcade.key.D, arcade.key.RIGHT, arcade.key.NUM_6, arcade.key.NUM_RIGHT),
-    'Inv': (arcade.key.E, arcade.key.TAB, arcade.key.NUM_ENTER),
-    'Context': (arcade.key.SPACE, arcade.key.NUM_ADD),
-    'Exit': (arcade.key.ESCAPE, ),
-    'Map': (arcade.key.M, arcade.key.NUM_DECIMAL),
-    'NE': (arcade.key.NUM_9, arcade.key.NUM_PAGE_UP),
-    'NW': (arcade.key.NUM_7, arcade.key.NUM_HOME),
-    'SE': (arcade.key.NUM_3, arcade.key.NUM_PAGE_DOWN),
-    'SW': (arcade.key.NUM_1, arcade.key.NUM_END),
-}
-
 
 def astar(start, goal, array=raw_maps[current_map]['Collision']):
     def heuristic(a, b):
@@ -198,6 +144,7 @@ class Armor(EquipmentItem):
         self.acp = acp
         self.cost = cost
         self.max_bonus = max_bonus
+        self.body_position = 'Chest'
 
     def __repr__(self):
         return '   {} (+{})'.format(self.name, self.bonus)
@@ -218,6 +165,7 @@ class Weapon(EquipmentItem):
         self.handed = handed
         self.crit_mult = crit_mult
         self.dmg_range = dmg_range
+        self.body_position = ['Left Hand', 'Right Hand']
 
     def __repr__(self):
         return '   {} ({})'.format(self.name, self.dmg)
@@ -260,32 +208,38 @@ class DialogItem(Entity):
         Entity.__init__(self, yx=yx, sprite=sprite)
         self.speaker = speaker
         if type(text) is str:
-            self.text = textwrap.wrap(text, 22)
+            working_text = text.split()
+            len_line = 0
+            out_lines = []
+            line_data = 0
+            counter = 0
+            while counter < len(working_text) - 1:
+                for char in working_text[counter]:
+                    len_line += char_width[char] // 8
+                len_line += 3  # spaces!
+                if len_line > 116:  # width of the dialog box
+                    out_lines.append(' '.join(working_text[line_data:counter]))
+                    counter -= 1
+                    len_line = 0
+                    line_data = counter + 1
+                counter += 1
+            self.text = out_lines
         else:
             self.text = text
         if dialog_opts:
             self.dialog_opts = list(dialog_opts.keys())
         else:
             self.dialog_opts = None
-        '''
-        if type(dialog_opts) is dict:
-            if type(dialog_opts[0]) is list:
-                self.dialog_opts = [[' {} '.format(opt) for opt in lin] for lin in dialog_opts]
-            else:
-                self.dialog_opts = [[' {} '.format(opt)] for opt in dialog_opts]
-        else:
-            self.dialog_opts = dialog_opts'''
 
     def new_opt(self, newopt):
         pass
 
-
-# BrokenDoor = DialogItem(sprite=33, text='Anime makes you gay', dialog_opts=[['Whats anime', 'Whys anime'], ['Ya', 'Nah']], speaker='Thine Momther', yx=(73, 27), on_level='Overworld')
-BrokenDoor = DialogItem(sprite=33, text='asdfasdf', speaker='Thine Momther', yx=(73, 27), on_level='Overworld')
-BrDo2 = DialogItem(sprite=33, text='asdfasdf',
+BrokenDoor = DialogItem(sprite=33, text='Who is it?', speaker='Thine Momther', yx=(73, 27), on_level='Overworld')
+BrDo2 = DialogItem(sprite=33,
                    dialog_opts={"What this?": BrokenDoor, "Why that?": BrokenDoor, "Who there?": BrokenDoor, "When it?": BrokenDoor},
                    speaker='Thine Momther', yx=(73, 27), on_level='Overworld')
-
+test_dia = DialogItem(sprite=34, text='''At last I have the privilege of making public this third book of Marx's main work, the conclusion of the theoretical part. When I published the second volume, in 1885, I thought that except for a few, certainly very important, sections the third volume would probably offer only technical difficulties. This was indeed the case. But I had no idea at the time that these sections, the most important parts of the entire work, would give me as much trouble as they did, just as I did not anticipate the other obstacles, which were to retard completion of the work to such an extent.''',
+                      speaker='Marx', yx=(73, 26), on_level='Overworld')
 
 class Player(Entity):
     def __init__(self):

@@ -1,13 +1,13 @@
 from custom_classes import *
 
 scilla = Item(name='Scilla', cost=10, weight=0, sprite=541, flavor_text='A lovely blue flower.')
-rose = Item(name='Red', cost=10, weight=0, sprite=542, flavor_text='Not as red as you expected.')
+rose = Item(name='Rose', cost=10, weight=0, sprite=542, flavor_text='Not as red as you expected.')
 violet = Item(name='Violet', cost=10, weight=0, sprite=543, flavor_text='Roses are red, violets are blue, I hit my head, there once was a man from peru')
 camellia = Item(name='Camellia', cost=10, weight=0, sprite=544, flavor_text='Snow on mount Fuji')
 sapphire = Item(name='Sapphire', cost=200, weight=1, sprite=546, flavor_text='Have a bite!')
 garnet = Item(name='Garnet', cost=600, weight=1, sprite=547)
 amber = Item(name='Amber', cost=2000, weight=1, sprite=548)
-tigerseye = Item(name="Tiger's Eye", cost=10000, weight=1, sprite=549)
+tigerseye = Item(name="Tiger's Eye", cost=10000, weight=1, sprite=549, flavor_text="That's just a couple of pixels why is it worth so much?")
 chest = Item(name='Small Chest', cost=50, weight=5, sprite=550)
 rmush = Item(name='Red Mushroom', cost=10, weight=1, sprite=162)
 lmush = Item(name='Large Red Mushroom', cost=20, weight=2, sprite=219)
