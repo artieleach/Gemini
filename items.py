@@ -27,6 +27,8 @@ paper = Item(name='Parchment', cost=2, weight=0, sprite=896)
 document = Item(name='Document', cost=8, weight=0, sprite=897)
 scroll = Item(name='Scroll', cost=60, weight=0, sprite=899)
 
+floatingtestone = EquipmentItem(name='Floating Test One', cost=0, weight=0, sprite=562)
+
 gauntlet = Weapon(name='Gauntlet', dmg='1d3', dmg_style='Bludgeoning', weight=1, weapon_type='simple', cost=2, handed=1, crit_mult='x2', dmg_range=0, weap_id=0)
 
 dagger = Weapon(name='Dagger', dmg='1d4', dmg_style='Piercing or slashing', weight=1, weapon_type='simple', cost=2, handed=1, crit_mult='19-20/x2', dmg_range=10, weap_id=0)

@@ -4,6 +4,7 @@ import heapq
 import tmx
 import os
 from PIL import Image
+import timeit
 
 
 rc = ROWS, COLS = (9, 16)
@@ -26,8 +27,6 @@ char_width = {' ': 24, '!': 16, '"': 32, '#': 48, '$': 32, '%': 32, '&': 48, "'"
               '`': 8,  'a': 32, 'b': 32, 'c': 32, 'd': 32, 'e': 32, 'f': 32, 'g': 32, 'h': 32, 'i': 16, 'j': 32, 'k': 32, 'l': 24, 'm': 48, 'n': 32, 'o': 32,
               'p': 32, 'q': 32, 'r': 32, 's': 32, 't': 32, 'u': 32, 'v': 32, 'w': 48, 'x': 32, 'y': 32, 'z': 32, '{': 32, '|': 16, '}': 32, '~': 32}
 
-
-
 for img in img_dir:
     if '8x8' in img:
         small = Image.open('./Images/{}'.format(img))
@@ -43,13 +42,13 @@ try:
     tile_set = arcade.draw_commands.load_textures('./Images/Tile.png', loc_array['Tile'])
     font = arcade.draw_commands.load_textures('./Images/Font.png', loc_array['Font'])
 except KeyError:
-    raise('Damn it Artie you didnt fix the fucking tile problem. Anyway, run this again and it should work, it was trying to grab an image before it was finished rendering.')
+    raise 'Damn it Artie you didnt fix the tile problem. \nAnyway, run this again and it should work, it was trying to grab an image before it was finished rendering.'
 
-movemnet_keys = {
-    'Up': (arcade.key.W, arcade.key.UP, arcade.key.NUM_8, arcade.key.NUM_UP),
-    'Down': (arcade.key.S, arcade.key.DOWN, arcade.key.NUM_2, arcade.key.NUM_DOWN),
-    'Left': (arcade.key.A, arcade.key.LEFT, arcade.key.NUM_4, arcade.key.NUM_LEFT),
-    'Right': (arcade.key.D, arcade.key.RIGHT, arcade.key.NUM_6, arcade.key.NUM_RIGHT),
+movement_keys = {
+    'N': (arcade.key.W, arcade.key.UP, arcade.key.NUM_8, arcade.key.NUM_UP),
+    'S': (arcade.key.S, arcade.key.DOWN, arcade.key.NUM_2, arcade.key.NUM_DOWN),
+    'W': (arcade.key.A, arcade.key.LEFT, arcade.key.NUM_4, arcade.key.NUM_LEFT),
+    'E': (arcade.key.D, arcade.key.RIGHT, arcade.key.NUM_6, arcade.key.NUM_RIGHT),
     'Inv': (arcade.key.E, arcade.key.TAB, arcade.key.NUM_ENTER),
     'Context': (arcade.key.SPACE, arcade.key.NUM_ADD),
     'Exit': (arcade.key.ESCAPE, ),

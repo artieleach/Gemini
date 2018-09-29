@@ -1,5 +1,6 @@
 from init import *
 
+
 class Entity:
     def __init__(self, yx=(0, 0), name=None, sprite=-1):
         self.y, self.x = yx
@@ -12,6 +13,7 @@ class Entity:
             return [i.name for i in in_list]
         except AttributeError:
             raise('{} does not have a name attribute'.format(in_list))
+
 
 for file in map_dir:  # Some layers need copies, and i figure having backups cant hurt
     map_file = tmx.TileMap.load('./Maps/{}'.format(file))
@@ -34,6 +36,7 @@ for file in map_dir:  # Some layers need copies, and i figure having backups can
                 raw_maps[file_name]['{} Copy'.format(layer.name)] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
         else:
             raw_maps[file_name] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
+
 
 def astar(start, goal, array=raw_maps[current_map]['Collision']):
     def heuristic(a, b):
@@ -144,7 +147,7 @@ class Armor(EquipmentItem):
         self.acp = acp
         self.cost = cost
         self.max_bonus = max_bonus
-        self.body_position = 'Chest'
+        self.body_position = ['Chest']
 
     def __repr__(self):
         return '   {} (+{})'.format(self.name, self.bonus)
@@ -234,12 +237,14 @@ class DialogItem(Entity):
     def new_opt(self, newopt):
         pass
 
+
 BrokenDoor = DialogItem(sprite=33, text='Who is it?', speaker='Thine Momther', yx=(73, 27), on_level='Overworld')
 BrDo2 = DialogItem(sprite=33,
                    dialog_opts={"What this?": BrokenDoor, "Why that?": BrokenDoor, "Who there?": BrokenDoor, "When it?": BrokenDoor},
                    speaker='Thine Momther', yx=(73, 27), on_level='Overworld')
 test_dia = DialogItem(sprite=34, text='''At last I have the privilege of making public this third book of Marx's main work, the conclusion of the theoretical part. When I published the second volume, in 1885, I thought that except for a few, certainly very important, sections the third volume would probably offer only technical difficulties. This was indeed the case. But I had no idea at the time that these sections, the most important parts of the entire work, would give me as much trouble as they did, just as I did not anticipate the other obstacles, which were to retard completion of the work to such an extent.''',
                       speaker='Marx', yx=(73, 26), on_level='Overworld')
+
 
 class Player(Entity):
     def __init__(self):
@@ -256,7 +261,9 @@ class Player(Entity):
             'XP': 0
         }
         self.inventory = []
-        self.equipped = {'Head': None, 'Left Hand': None, 'Right Hand': None, 'Feet': None, 'Chest': None, 'Legs': None, 'Rings': [], }
+        self.equipped = {'Floating Left': None, 'Left Arm': None, 'Left Weapon': None, 'Left Ring One': None, 'Left Ring Two': None,
+                         'Helmet': None, 'Shoulders': None, 'Chest': None, 'Gloves': None, 'Boots': None,
+                         'Floating Right': None, 'Right Arm': None, 'Right Weapon': None, 'Right Ring One': None, 'Right Ring Two': None}
         self.state = 'Walking'
 
     @staticmethod
