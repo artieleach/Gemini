@@ -1,14 +1,20 @@
 **TODO**: 
-* rework the "equipped" screen to be more of a chart of where equipped items are, rather than a list.
-* randomly generated terrain?
+* randomly generated terrain
+* enemy ai
+* NPCs with different AI (case based?)
+* weapon stats, different grades of weapons, etc
+* weapon modifiers
+* items
+* shops
+* dialog trees
+* animations, spesifically: walking, opening things, (switch to water animation? test.)
+* dynamic climate
+* levels
+* audio
 
-Equipment Screen:
-* allow for 2d movement on the table
-* for 2d movement, use the self.cur_opt[1] (offset) for which col is highlihted
+abstract inventory lists?
 
-have three lists of equipment going vertically, when the eqp screen is selected change left/right to move between the lists
-'floating left': None, 'left arm': None, 'left weapon': None, 'left ring': None, 'left ring': None, 'helmet': None, 'shoulders': None, 'chest': None, 'gloves': None, 'boots': None, 'floating right': None, 'right arm': None, 'right weapon': None, 'right ring': None, 'right ring': None, '
 
-if i < len(current list)
-
-current list coiuld be.... self.cur_text.dialog_opts.len()? 
+bug list:
+* self.cur_opt is being updated, but the position of the cursor isn't
+* the context key doesnt trigger the sub menu, might have to do with self.opt_highlighted

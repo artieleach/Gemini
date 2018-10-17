@@ -25,10 +25,10 @@ class Game(arcade.Window):
         arcade.start_render()
         for row in range(ROWS):
             for col in range(COLS+1):
-                if raw_maps[current_map]['Back'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]:
+                if raw_maps[current_map]['Back'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2] and all([istransparent[raw_maps[current_map]['Mid'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]], istransparent[raw_maps[current_map]['Fore'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]]]):
                     arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set
                     [raw_maps[current_map]['Back'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]])
-                if raw_maps[current_map]['Mid'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]:
+                if raw_maps[current_map]['Mid'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2] and istransparent[raw_maps[current_map]['Fore'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]]:
                     arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set
                     [raw_maps[current_map]['Mid'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]])
                 if raw_maps[current_map]['Sprite'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]:
@@ -37,7 +37,6 @@ class Game(arcade.Window):
                 if raw_maps[current_map]['Fore'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]:
                     arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set
                     [raw_maps[current_map]['Fore'][row + self.p.y - ROWS // 2, col + self.p.x - COLS // 2]])
-
 
     def add_sprites(self):
         raw_maps[current_map]['Sprite'][:] = raw_maps[current_map]['Sprite Copy']
@@ -49,6 +48,8 @@ class Game(arcade.Window):
     def on_draw(self):
         draw_start_time = timeit.default_timer()
         self.draw_base()
+
+
         if self.p.state is 'Talking':
             for row in range(ROWS):
                 for col in range(COLS):
@@ -112,39 +113,36 @@ class Game(arcade.Window):
 
     def gen_inv(self):
         for i in range(4):
-            self.gen_lone_tile(i+1820, (1.5 + i * 2, 8))
+            self.gen_lone_tile(i+1820, (1.5 + i * 2, 8))  # icons for menu tabs
+
         if self.inventory_screen == 0:
-            try:
-                for i in range(len(self.p.inventory[self.cur_opt[1]:self.cur_opt[1] + 6 or -1])):
-                    self.gen_lone_tile(self.p.inventory[i + self.cur_opt[1]].sprite, yx=(2, 6.5 - i))
-            except IndexError:
-                pass
+            for i in range(len(self.p.inventory[self.cur_opt[1]:self.cur_opt[1] + 6 or -1])):
+                self.gen_lone_tile(self.p.inventory[i + self.cur_opt[1]].sprite, yx=(2, 6.5 - i))
             if not self.opt_highlighted:
                 self.gen_text(opts=['  {}'.format(i) for i in self.p.name_list(self.p.inventory)], yx=(6.5, 1.5), len_display=6)
             else:
                 self.gen_text(text=['  {}'.format(i) for i in self.p.name_list(self.p.inventory)], yx=(6.5, 1.5), len_display=6)
                 self.gen_sub_menu()  # this is disgusting
-        if self.inventory_screen == 1:
+
+        elif self.inventory_screen == 1:
             for item_pos, cur_item in enumerate(list(self.p.equipped.keys())):
                 if self.p.equipped[cur_item] is not None:
                     self.gen_lone_tile(self.p.equipped[cur_item].sprite, yx=(2 + item_pos // 5, 6 - item_pos % 5))
             if not self.opt_highlighted:
-                self.gen_lone_tile(1905, yx=(2 + self.cur_opt[1], 6 - self.cur_opt[0]))
-                if self.p.equipped[list(self.p.equipped.keys())[self.cur_opt[1] * 5 + self.cur_opt[0]]] is not None:
-                    print(self.p.equipped[list(self.p.equipped.keys())[self.cur_opt[1] * 5 + self.cur_opt[0]]].name)
-                    self.gen_text(text=[self.p.equipped[list(self.p.equipped.keys())[self.cur_opt[1] * 5 + self.cur_opt[0]]].name], yx=(6.5, 5.5))
-            else:  # opt is selected
-                self.gen_text(text=self.p.equipped[list(self.p.equipped.keys())[self.cur_opt[1] * 5 + self.cur_opt[0]]].actions, yx=(6.5, 1.5), len_display=6)
+                self.gen_lone_tile(1905, yx=(2 + self.cur_opt[0] % 5, self.cur_opt[0] // 5))
+                if self.p.equipped[list(self.p.equipped.keys())[self.cur_opt[0]]] is not None:
+                    self.gen_text(text=[self.p.equipped[list(self.p.equipped.keys())[self.cur_opt[0]]].name], yx=(6.5, 5.5))
+            else:
+                self.gen_text(text=self.p.equipped[list(self.p.equipped.keys())[self.cur_opt[0]]].actions, yx=(6.5, 1.5), len_display=6)
                 self.gen_sub_menu()
-        if self.inventory_screen == 2:
+        elif self.inventory_screen == 2:
             self.gen_text(text=self.p.get_stats(), yx=(6.5, 1), len_display=6)
-        if self.inventory_screen == 3:
+        elif self.inventory_screen == 3:
             self.gen_text(opts=options_menu, yx=(6.5, 2))
 
     def gen_sub_menu(self):
         for x, row in enumerate(raw_maps['submenu']):
             for y, col in enumerate(row):
-                print('got this far')
                 self.gen_tile_array(raw_maps['submenu'], (x, y), yx=(10, 2.5))
         self.gen_text(opts=self.cur_item.get_actions(), yx=(6, 11))
 
@@ -190,23 +188,27 @@ class Game(arcade.Window):
                 if key in movement_keys['Context']:
                     if self.opt_highlighted:
                         self.interact_item(self.cur_item, self.cur_item.actions[self.cur_opt[0]])
+                        self.opt_highlighted = False
                     else:
                         self.cur_item = self.p.inventory[sum(self.cur_opt)]
+                        self.opt_highlighted = True
 
             if self.inventory_screen == 1:
-                if key in movement_keys['S'] and self.cur_opt[0] < 4:
+                if key in movement_keys['S'] and self.cur_opt[0] < 14:
                     self.cur_opt[0] += 1
                 if key in movement_keys['N'] and self.cur_opt[0] > 0:
                     self.cur_opt[0] -= 1
-                if key in movement_keys['E'] and self.cur_opt[1] < 2:
-                    self.cur_opt[1] += 1
-                if key in movement_keys['W'] and self.cur_opt[1] > 0:
-                    self.cur_opt[1] -= 1
+                if key in movement_keys['E'] and self.cur_opt[0] < 10:
+                    self.cur_opt[0] += 5
+                if key in movement_keys['W'] and self.cur_opt[0] > 5:
+                    self.cur_opt[0] -= 5
                 if key in movement_keys['Context']:
                     if self.opt_highlighted:
                         self.interact_item(self.cur_item, self.cur_item.actions[self.cur_opt[0]])
+                        self.opt_highlighted = False
                     else:
                         self.cur_item = self.p.equipped[list(self.p.equipped.keys())[self.cur_opt[0]]].name
+                        self.opt_highlighted = True
             if self.inventory_screen == 2:
                 pass
             if self.inventory_screen == 3:

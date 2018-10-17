@@ -27,11 +27,17 @@ char_width = {' ': 24, '!': 16, '"': 32, '#': 48, '$': 32, '%': 32, '&': 48, "'"
               '`': 8,  'a': 32, 'b': 32, 'c': 32, 'd': 32, 'e': 32, 'f': 32, 'g': 32, 'h': 32, 'i': 16, 'j': 32, 'k': 32, 'l': 24, 'm': 48, 'n': 32, 'o': 32,
               'p': 32, 'q': 32, 'r': 32, 's': 32, 't': 32, 'u': 32, 'v': 32, 'w': 48, 'x': 32, 'y': 32, 'z': 32, '{': 32, '|': 16, '}': 32, '~': 32}
 
+istransparent = []
 for img in img_dir:
     if '8x8' in img:
         small = Image.open('./Images/{}'.format(img))
         bigger = small.resize((small.size[0]*8, small.size[1]*8))
         bigger.save('./Images/{}'.format(img.split('8x8')[1]), 'PNG')
+        if 'Tile' in img:
+            for i in range((small.size[0]-1) // 8):
+                for j in range((small.size[1]-1) // 8):
+                    tile_to_check = small.crop(box=(i*8, j*8, (i+1)*8, (j+1)*8))
+                    istransparent.append(00 in tile_to_check.tobytes())
     else:
         img_name = img.split('.')[0]
         cur_img = Image.open('./Images/{}'.format(img))
@@ -49,8 +55,8 @@ movement_keys = {
     'S': (arcade.key.S, arcade.key.DOWN, arcade.key.NUM_2, arcade.key.NUM_DOWN),
     'W': (arcade.key.A, arcade.key.LEFT, arcade.key.NUM_4, arcade.key.NUM_LEFT),
     'E': (arcade.key.D, arcade.key.RIGHT, arcade.key.NUM_6, arcade.key.NUM_RIGHT),
-    'Inv': (arcade.key.E, arcade.key.TAB, arcade.key.NUM_ENTER),
-    'Context': (arcade.key.SPACE, arcade.key.NUM_ADD),
+    'Inv': (arcade.key.E, arcade.key.TAB, arcade.key.NUM_ADD),
+    'Context': (arcade.key.SPACE, arcade.key.NUM_ENTER),
     'Exit': (arcade.key.ESCAPE, ),
     'Map': (arcade.key.M, arcade.key.NUM_DECIMAL),
     'NE': (arcade.key.NUM_9, arcade.key.NUM_PAGE_UP),
