@@ -1,5 +1,6 @@
 from items import *
 
+
 class Game(arcade.Window):
     def __init__(self, width, height):
         super().__init__(width, height)
@@ -49,7 +50,6 @@ class Game(arcade.Window):
         draw_start_time = timeit.default_timer()
         self.draw_base()
 
-
         if self.p.state is 'Talking':
             for row in range(ROWS):
                 for col in range(COLS):
@@ -72,7 +72,7 @@ class Game(arcade.Window):
         self.opt_highlighted = False
         if new_state is 'Talking':
             if self.cur_text.speaker:
-                raw_maps['dialog'][3] = [i for s in [[0], [1563], [1564] * ((len(self.cur_text.speaker)) // 2 + 1), [1565], [-1] * 15] for i in s][:16]
+                raw_maps['dialog'][3] = [cur_tile for cur_row in [[0], [1563], [1564] * ((len(self.cur_text.speaker)) // 2 + 1), [1565], [-1] * 15] for cur_tile in cur_row][:16]
             else:
                 raw_maps['dialog'][3] = [-1] * 16
         if new_state is 'Walking':
@@ -112,16 +112,16 @@ class Game(arcade.Window):
                     arcade.draw_texture_rectangle(width_sum + (x * WIDTH), ((y - line_pos) * HEIGHT), WIDTH, HEIGHT, font[ord(char)])
 
     def gen_inv(self):
-        for i in range(4):
-            self.gen_lone_tile(i+1820, (1.5 + i * 2, 8))  # icons for menu tabs
+        for icon in range(4):
+            self.gen_lone_tile(icon+1820, (1.5 + icon * 2, 8))  # icons for menu tabs
 
         if self.inventory_screen == 0:
-            for i in range(len(self.p.inventory[self.cur_opt[1]:self.cur_opt[1] + 6 or -1])):
-                self.gen_lone_tile(self.p.inventory[i + self.cur_opt[1]].sprite, yx=(2, 6.5 - i))
+            for cur_item in range(len(self.p.inventory[self.cur_opt[1]:self.cur_opt[1] + 6 or -1])):
+                self.gen_lone_tile(self.p.inventory[cur_item + self.cur_opt[1]].sprite, yx=(2, 6.5 - cur_item))
             if not self.opt_highlighted:
-                self.gen_text(opts=['  {}'.format(i) for i in self.p.name_list(self.p.inventory)], yx=(6.5, 1.5), len_display=6)
+                self.gen_text(opts=['  {}'.format(cur_item) for cur_item in self.p.name_list(self.p.inventory)], yx=(6.5, 1.5), len_display=6)
             else:
-                self.gen_text(text=['  {}'.format(i) for i in self.p.name_list(self.p.inventory)], yx=(6.5, 1.5), len_display=6)
+                self.gen_text(text=['  {}'.format(cur_item) for cur_item in self.p.name_list(self.p.inventory)], yx=(6.5, 1.5), len_display=6)
                 self.gen_sub_menu()  # this is disgusting
 
         elif self.inventory_screen == 1:
@@ -232,7 +232,7 @@ class Game(arcade.Window):
                     if self.cur_opt[0] > 0:
                         self.cur_opt[0] -= 1
                     elif self.cur_opt[1] > 0:
-                        self.cur_opt[1] -=1
+                        self.cur_opt[1] -= 1
                 if key in movement_keys['S']:
                     if self.cur_opt[0] < 2:
                         self.cur_opt[0] += 1
@@ -305,13 +305,6 @@ class Game(arcade.Window):
         if action is 'Drop':
             self.p.inventory.remove(item)
 
-    def add_sprites(self):
-        raw_maps[current_map]['Sprite'][:] = raw_maps[current_map]['Sprite Copy']
-        for actor in self.actor_list:
-            raw_maps[current_map]['Sprite'][actor.y, actor.x] = actor
-        else:
-            raw_maps[current_map]['Sprite'][self.p.y, self.p.x] = self.p
-
     def game_step(self):
         self.add_sprites()
         cur_health = [item for sublist in [[1745] * (self.p.stats['HP'] // 2), [1746] * (self.p.stats['HP'] % 2 == 1)] for item in sublist]
@@ -319,7 +312,7 @@ class Game(arcade.Window):
             if type(act) is Actor:
                 try:
                     if act.disposition is 'Friendly':
-                        enemy_list = [i for i in self.actor_list if i.disposition is 'Aggressive']
+                        enemy_list = [enemy for enemy in self.actor_list if i.disposition is 'Aggressive']
                         if enemy_list:
                             act.target_distance = 1
                             act.move_me((enemy_list[0].y, enemy_list[0].x))
