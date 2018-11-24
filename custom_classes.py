@@ -25,9 +25,9 @@ for file in map_dir:  # Some layers need copies, and i figure having backups can
         raw_maps[file_name]['Sprite Copy'] = np.zeros(shape=(map_file.width, map_file.height), dtype=Entity)
         for tile in layer.tiles:
             if tile.gid != 0:
-                map_data.append(tile.gid-1)
+                map_data.append(tile.gid)
             else:
-                map_data.append(-1)
+                map_data.append(0)
         if len(map_file.layers) > 1:
             try:
                 raw_maps[file_name][int(layer.name)] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
@@ -87,10 +87,9 @@ def astar(start, goal, array=raw_maps[current_map]['Collision']):
     return False
 
 
-def roll_dice(s='1d'):
+def roll_dice(s='1d'):  # you might be thinking this has no reason to look so ugly, and you're right.
     d = list(map(int, s.split('d')))
-    return int(s != '1d') * sum(sorted(list(np.random.randint(1, d[1])
-                                            for _ in range(d[0])))[d[-1] * (len(d) > 2):]) or np.random.randint(0, 1)
+    return sum(sorted(list(np.random.randint(1, d[1], d[0])))[d[-1] if len(d) > 2 else 0:]) if s != '1d' else np.random.randint(0, 1)
 
 
 class Actor(Entity):
@@ -248,7 +247,7 @@ test_dia = DialogItem(sprite=34, text='''At last I have the privilege of making 
 
 class Player(Entity):
     def __init__(self):
-        Entity.__init__(self, yx=(71, 26), name=Player, sprite=1767)
+        Entity.__init__(self, yx=(71, 26), name=Player, sprite=1768)
         self.gold = Gold(100)
         self.stats = {
             'Str': roll_dice('4d6d1'),

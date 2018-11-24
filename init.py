@@ -32,11 +32,12 @@ for img in img_dir:
     if '8x8' in img:
         small = Image.open('./Images/{}'.format(img))
         bigger = small.resize((small.size[0]*8, small.size[1]*8))
-        bigger.save('./Images/{}'.format(img.split('8x8')[1]), 'PNG')
+        bigger.save('./Images/64x64{}'.format(img.split('8x8')[1]), 'PNG')
         if 'Tile' in img:
             for i in range((small.size[0]-1) // 8):
                 for j in range((small.size[1]-1) // 8):
                     tile_to_check = small.crop(box=(i*8, j*8, (i+1)*8, (j+1)*8))
+                    # tile_to_check.save('./Throw/{},{}_{}'.format(i, j, 00 in tile_to_check.tobytes()), 'PNG')
                     istransparent.append(00 in tile_to_check.tobytes())
     else:
         img_name = img.split('.')[0]
@@ -45,8 +46,9 @@ for img in img_dir:
         cur_img.close()
 
 try:
-    tile_set = arcade.draw_commands.load_textures('./Images/Tile.png', loc_array['Tile'])
-    font = arcade.draw_commands.load_textures('./Images/Font.png', loc_array['Font'])
+    tile_set = arcade.draw_commands.load_textures('./Images/64x64Tile.png', loc_array['Tile'])
+    font = arcade.draw_commands.load_textures('./Images/64x64Font.png', loc_array['Font'])
+    tile_set.insert(0, tile_set[-1])
 except KeyError:
     raise 'Damn it Artie you didnt fix the tile problem. \nAnyway, run this again and it should work, it was trying to grab an image before it was finished rendering.'
 
