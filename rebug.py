@@ -4,6 +4,7 @@ import heapq
 import tmx
 import os
 import timeit
+import time
 from PIL import Image
 
 
@@ -89,8 +90,9 @@ movement_keys = {
 
 
 def astar(start, goal, array=raw_maps[current_map]['Collision']):
-    """implementation of astar algorithm, neighbors can be modified to allow for different movement sets."""
-    print(raw_maps[current_map]['Collision'][start[0]-2:start[0]+3, start[1]-2:start[1]+3])
+    """implementation of astar algorithm, neighbors can be
+    modified to allow for different movement sets."""
+
     def heuristic(a, b):
         return (b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2
 
@@ -170,11 +172,11 @@ class Actor(Entity):
             if path:
                 self.y, self.x = path[-1]
         elif self.y == goal[0] and self.x == goal[1]:  # lazy implentation of moving AI out of the way, needs to be rewritten for different dispositions
-            if raw_maps[current_map]['Collision'][self.y + 1, self.x] == -1:
+            if raw_maps[current_map]['Collision'][self.y + 1, self.x]:
                 self.y, self.x = self.y + 1, self.x
-            elif not raw_maps[current_map]['Collision'][self.y - 1, self.x] == -1:
+            if raw_maps[current_map]['Collision'][self.y - 1, self.x]:
                 self.y, self.x = self.y - 1, self.x
-            elif not raw_maps[current_map]['Collision'][self.y, self.x + 1] == -1:
+            if raw_maps[current_map]['Collision'][self.y, self.x + 1]:
                 self.y, self.x = self.y, self.x + 1
             else:
                 self.y, self.x = self.y, self.x - 1
@@ -285,16 +287,17 @@ class DialogItem(Entity):
                     len_line = 0
                     line_data = counter + 1
                 counter += 1
+            out_lines.append(' '.join(working_text[line_data:]))
             self.text = out_lines
         else:
             self.text = text
-        if dialog_opts:
-            self.dialog_opts = list(dialog_opts.keys())
-        else:
-            self.dialog_opts = None
+        self.dialog_opts = dialog_opts
 
     def new_opt(self, newopt):
         pass
+
+    def __repr__(self):
+        return 'Speaker: {}\nText: {}\nDialog Options: \n{}\n'.format(self.speaker, self.text, self.dialog_opts)
 
 
 class Player(Entity):
@@ -331,10 +334,6 @@ class Player(Entity):
         return '{HP:02d} {FP:02d}'.format(**self.stats).split()
 
 
-BrokenDoor = DialogItem(sprite=33, text='Who is it?', speaker='Thine Momther', yx=(73, 27), on_level='overworld')
-BrDo2 = DialogItem(sprite=33,
-                   dialog_opts={"What this?": BrokenDoor, "Why that?": BrokenDoor, "Who there?": BrokenDoor, "When it?": BrokenDoor},
-                   speaker='Thine Momther', yx=(73, 27), on_level='overworld')
 test_dia = DialogItem(sprite=34, text='''
 At last I have the privilege of making public this third book of Marx's main work,
 the conclusion of the theoretical part. When I published the second volume, in 1885, 
@@ -343,12 +342,19 @@ volume would probably offer only technical difficulties. This was indeed the cas
 But I had no idea at the time that these sections, the most important parts of the 
 entire work, would give me as much trouble as they did, just as I did not anticipate 
 the other obstacles, which were to retard completion of the work to such an extent.''',
-                      speaker='Marx', yx=(73, 26), on_level='overworld')
+                      speaker='Engels', yx=(73, 26), on_level='overworld')
+other_test = DialogItem(sprite=35, text="got this far", speaker='Marie', yx=(73, 26), on_level='overworld')
+BrokenDoor = DialogItem(sprite=33, text='Who is it?', dialog_opts={"Me": test_dia, "You": other_test}, speaker='Dick Allcocks from Man Island', yx=(73, 27), on_level='overworld')
+BrDo2 = DialogItem(sprite=33,
+                   dialog_opts={"What this?": BrokenDoor, "Why that?": BrokenDoor, "Who there?": BrokenDoor, "When it?": BrokenDoor},
+                   speaker='Thine Momther', yx=(73, 27), on_level='overworld')
 
 
 class Game(arcade.Window):
     def __init__(self, width, height):
         super().__init__(width, height)
+        self.last_input_time = 0
+        self.cur_time = 0
         self.draw_time = 0
         self.processing_time = 0
         self.pressed_keys = self.pressed_keys
@@ -410,7 +416,13 @@ class Game(arcade.Window):
             for col in range(-(-self.p.stats['HP'] // 2)):  # weird ass way of getting how many heart containers to draw
                 self.gen_lone_tile(self.cur_health[col], (0.5 + col, 8.5))
         fps = 1 / (self.draw_time + self.processing_time)
-        arcade.draw_text('FPS: {}'.format(int(fps)), 20, SCREEN_HEIGHT - 80, arcade.color.WHITE, 16)
+        if fps < 20:
+            cur_color = arcade.color.RED
+        elif fps < 60:
+            cur_color = arcade.color.WHITE
+        else:
+            cur_color = arcade.color.GREEN
+        arcade.draw_text('FPS: {}'.format(int(fps)), 20, SCREEN_HEIGHT - 80, cur_color, 16)
         self.draw_time = timeit.default_timer() - draw_start_time
 
     def switch_state(self, new_state, new_map=None):
@@ -427,7 +439,6 @@ class Game(arcade.Window):
             self.inventory_screen = 0
         self.p.state = new_state
         if new_map:
-            print(new_map)
             raw_maps[new_map]['Sprite'] = np.zeros(shape=raw_maps[new_map]['Back'].shape, dtype=Entity)
             raw_maps[new_map]['Sprite Copy'] = np.zeros(shape=raw_maps[new_map]['Back'].shape, dtype=Entity)
 
@@ -447,8 +458,15 @@ class Game(arcade.Window):
                 width_sum += char_width[speaker[char_pos-1]]
                 arcade.draw_texture_rectangle(width_sum+40, 216, WIDTH, HEIGHT, font[ord(char)])
         if opts:
-            cursor_locs = np.arange(0, len(opts))
-            for item_pos, item in enumerate(opts[self.cur_opt[1]:self.cur_opt[1] + len_display]):
+            if type(opts) is not list:
+                opt_names = list(opts.keys())
+            else:
+                opt_names = opts
+            if text:
+                cursor_locs = np.arange(len(text), len(text) + len(opt_names))
+            else:
+                cursor_locs = np.arange(0, len(opt_names))
+            for item_pos, item in enumerate(opt_names[self.cur_opt[1]:self.cur_opt[1] + len_display]):
                 width_sum = 0
                 for char_pos, char in enumerate(item):
                     width_sum += char_width[item[char_pos - 1]]
@@ -576,7 +594,7 @@ class Game(arcade.Window):
                 if key in movement_keys['N'] and self.cur_opt[0] > 0:
                     self.cur_opt[0] -= 1
 
-        if self.p.state is 'Walking':
+        elif self.p.state is 'Walking':
             if key in movement_keys['Inv']:
                 self.switch_state('Inventory')
             if key in movement_keys['Context']:
@@ -584,7 +602,7 @@ class Game(arcade.Window):
                     self.cur_text = raw_maps[current_map]['Sprite'][self.p.y + 1, self.p.x]
                     self.switch_state('Talking')
 
-        if self.p.state is 'Talking':
+        elif self.p.state is 'Talking':
             if key in movement_keys['N']:
                 if self.cur_opt[0] > 0:
                     self.cur_opt[0] -= 1
@@ -597,7 +615,10 @@ class Game(arcade.Window):
                     self.cur_opt[1] += 1
             if key in movement_keys['Context']:
                 if self.cur_text.dialog_opts:
-                    print(self.cur_text.dialog_opts[sum(self.cur_opt)])
+                    raw_maps[current_map]['Sprite'][self.p.y + 1, self.p.x] = self.cur_text.dialog_opts[list(self.cur_text.dialog_opts)[sum(self.cur_opt)]]
+                    self.whatsnextifier(choice=self.cur_text.dialog_opts[list(self.cur_text.dialog_opts)[sum(self.cur_opt)]])
+                    self.switch_state('Talking')
+                    print(raw_maps[current_map]['Sprite'][self.p.y + 1, self.p.x])
                 elif len(self.cur_text.text) > 3:
                     if len(self.cur_text.text) - 2 > self.cur_opt[1]:
                         self.cur_opt[1] += 1
@@ -615,43 +636,46 @@ class Game(arcade.Window):
 
     def update(self, delta_time: float):
         start_time = timeit.default_timer()
-        if self.p.state is 'Walking':
-            if any(key in movement_keys['N'] for key in self.pressed_keys):
-                if raw_maps[current_map]['Collision'][self.p.y + 1, self.p.x] == 0:
-                    self.p.y += 1
-                    self.game_step()
-            if any(key in movement_keys['S'] for key in self.pressed_keys):
-                if raw_maps[current_map]['Collision'][self.p.y - 1, self.p.x] == 0:
-                    self.p.y -= 1
-                    self.game_step()
-            if any(key in movement_keys['E'] for key in self.pressed_keys):
-                if raw_maps[current_map]['Collision'][self.p.y, self.p.x + 1] == 0:
-                    self.p.x += 1
-                    self.game_step()
-            if any(key in movement_keys['W'] for key in self.pressed_keys):
-                if raw_maps[current_map]['Collision'][self.p.y, self.p.x - 1] == 0:
-                    self.p.x -= 1
-                    self.game_step()
-            if any(key in movement_keys['NE'] for key in self.pressed_keys):
-                if raw_maps[current_map]['Collision'][self.p.y + 1, self.p.x + 1] == 0:
-                    self.p.x += 1
-                    self.p.y += 1
-                    self.game_step()
-            if any(key in movement_keys['NW'] for key in self.pressed_keys):
-                if raw_maps[current_map]['Collision'][self.p.y - 1, self.p.x + 1] == 0:
-                    self.p.x -= 1
-                    self.p.y += 1
-                    self.game_step()
-            if any(key in movement_keys['SE'] for key in self.pressed_keys):
-                if raw_maps[current_map]['Collision'][self.p.y + 1, self.p.x - 1] == 0:
-                    self.p.x += 1
-                    self.p.y -= 1
-                    self.game_step()
-            if any(key in movement_keys['SW'] for key in self.pressed_keys):
-                if raw_maps[current_map]['Collision'][self.p.y - 1, self.p.x - 1] == 0:
-                    self.p.x -= 1
-                    self.p.y -= 1
-                    self.game_step()
+        if self.p.state is 'Walking' and self.pressed_keys:
+            self.cur_time = time.process_time()
+            if self.cur_time - self.last_input_time > 0.05:
+                if any(key in movement_keys['N'] for key in self.pressed_keys):
+                    if raw_maps[current_map]['Collision'][self.p.y + 1, self.p.x] == 0:
+                        self.p.y += 1
+                        self.game_step()
+                if any(key in movement_keys['S'] for key in self.pressed_keys):
+                    if raw_maps[current_map]['Collision'][self.p.y - 1, self.p.x] == 0:
+                        self.p.y -= 1
+                        self.game_step()
+                if any(key in movement_keys['E'] for key in self.pressed_keys):
+                    if raw_maps[current_map]['Collision'][self.p.y, self.p.x + 1] == 0:
+                        self.p.x += 1
+                        self.game_step()
+                if any(key in movement_keys['W'] for key in self.pressed_keys):
+                    if raw_maps[current_map]['Collision'][self.p.y, self.p.x - 1] == 0:
+                        self.p.x -= 1
+                        self.game_step()
+                if any(key in movement_keys['NE'] for key in self.pressed_keys):
+                    if raw_maps[current_map]['Collision'][self.p.y + 1, self.p.x + 1] == 0:
+                        self.p.x += 1
+                        self.p.y += 1
+                        self.game_step()
+                if any(key in movement_keys['NW'] for key in self.pressed_keys):
+                    if raw_maps[current_map]['Collision'][self.p.y - 1, self.p.x + 1] == 0:
+                        self.p.x -= 1
+                        self.p.y += 1
+                        self.game_step()
+                if any(key in movement_keys['SE'] for key in self.pressed_keys):
+                    if raw_maps[current_map]['Collision'][self.p.y + 1, self.p.x - 1] == 0:
+                        self.p.x += 1
+                        self.p.y -= 1
+                        self.game_step()
+                if any(key in movement_keys['SW'] for key in self.pressed_keys):
+                    if raw_maps[current_map]['Collision'][self.p.y - 1, self.p.x - 1] == 0:
+                        self.p.x -= 1
+                        self.p.y -= 1
+                        self.game_step()
+                self.last_input_time = self.cur_time
         self.processing_time = timeit.default_timer() - start_time
 
     def interact_item(self, item, action):
@@ -669,19 +693,23 @@ class Game(arcade.Window):
         if action is 'Drop':
             self.p.inventory.remove(item)
 
+    def whatsnextifier(self, choice):
+        raw_maps[current_map]['Sprite'][self.p.y+1, self.p.x] = choice
+        self.cur_text = raw_maps[current_map]['Sprite'][self.p.y + 1, self.p.x]
+
     def game_step(self):
-        self.add_sprites()
-        cur_health = [item for sublist in [[1745] * (self.p.stats['HP'] // 2), [1746] * (self.p.stats['HP'] % 2 == 1)] for item in sublist]
-        actor_list = [cur_act for cur_act in self.actor_list if hasattr(cur_act, 'disposition')]
-        enemy_list = [enemy for enemy in actor_list if enemy.disposition is 'Aggressive']
-        for actor in actor_list:
-            if actor.disposition is 'Friendly':
-                if enemy_list:
-                    actor.move_me((enemy_list[0].y, enemy_list[0].x))
-                else:
+            self.add_sprites()
+            cur_health = [item for sublist in [[1745] * (self.p.stats['HP'] // 2), [1746] * (self.p.stats['HP'] % 2 == 1)] for item in sublist]
+            actor_list = [cur_act for cur_act in self.actor_list if hasattr(cur_act, 'disposition')]
+            enemy_list = [enemy for enemy in actor_list if enemy.disposition is 'Aggressive']
+            for actor in actor_list:
+                if actor.disposition is 'Friendly':
+                    if enemy_list:
+                        actor.move_me((enemy_list[0].y, enemy_list[0].x))
+                    else:
+                        actor.move_me((self.p.y, self.p.x))
+                elif actor.disposition is 'Aggressive':
                     actor.move_me((self.p.y, self.p.x))
-            elif actor.disposition is 'Aggressive':
-                actor.move_me((self.p.y, self.p.x))
 
 
 def main():
