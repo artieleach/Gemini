@@ -5,6 +5,7 @@ import tmx
 import os
 import timeit
 import time
+import io
 from PIL import Image
 
 
@@ -15,6 +16,7 @@ wait_time = 0.01
 
 current_map = 'overworld'
 raw_maps = {}
+mappos = {}
 loc_array = {}
 options_menu = ['Settings', 'Gameplay', 'Exit']
 
@@ -38,7 +40,6 @@ for img in img_dir:
             for i in range((small.size[0]-1) // 8):
                 for j in range((small.size[1]-1) // 8):
                     tile_to_check = small.crop(box=(i*8, j*8, (i+1)*8, (j+1)*8))
-                    # tile_to_check.save('./Throw/{},{}_{}'.format(i, j, 00 in tile_to_check.tobytes()), 'PNG')
                     istransparent.append(00 in tile_to_check.tobytes())
     else:
         img_name = img.split('.')[0]
@@ -65,6 +66,7 @@ for file in map_dir:  # Some layers need copies, and i figure having backups can
         for tile in layer.tiles:
             map_data.append(tile.gid)
         if len(map_file.layers) > 1:
+            # add some code here to make a single map array with tuples instead of distinct arrays
             try:
                 raw_maps[file_name][int(layer.name)] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
             except ValueError:
@@ -72,15 +74,16 @@ for file in map_dir:  # Some layers need copies, and i figure having backups can
                 raw_maps[file_name]['{} Copy'.format(layer.name)] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
         else:
             raw_maps[file_name] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
+    mappos[file_name] = np.stack((raw_maps[file_name]*), axis=-1)
 
 movement_keys = {
-    'N': (arcade.key.W, arcade.key.UP, arcade.key.NUM_8, arcade.key.NUM_UP),
+    'N':  (arcade.key.NUM_8, arcade.key.W, arcade.key.UP, arcade.key.NUM_UP),
     'NE': (arcade.key.NUM_9, arcade.key.NUM_PAGE_UP),
-    'E': (arcade.key.D, arcade.key.RIGHT, arcade.key.NUM_6, arcade.key.NUM_RIGHT),
+    'E':  (arcade.key.NUM_6, arcade.key.D, arcade.key.RIGHT, arcade.key.NUM_RIGHT),
     'SE': (arcade.key.NUM_3, arcade.key.NUM_PAGE_DOWN),
-    'S': (arcade.key.S, arcade.key.DOWN, arcade.key.NUM_2, arcade.key.NUM_DOWN),
+    'S':  (arcade.key.NUM_2, arcade.key.S, arcade.key.DOWN, arcade.key.NUM_DOWN),
     'SW': (arcade.key.NUM_1, arcade.key.NUM_END),
-    'W': (arcade.key.A, arcade.key.LEFT, arcade.key.NUM_4, arcade.key.NUM_LEFT),
+    'W':  (arcade.key.NUM_4, arcade.key.A, arcade.key.LEFT, arcade.key.NUM_4, arcade.key.NUM_LEFT),
     'NW': (arcade.key.NUM_7, arcade.key.NUM_HOME),
     'Inv': (arcade.key.E, arcade.key.TAB, arcade.key.NUM_ADD),
     'Context': (arcade.key.SPACE, arcade.key.NUM_ENTER),
@@ -343,8 +346,8 @@ But I had no idea at the time that these sections, the most important parts of t
 entire work, would give me as much trouble as they did, just as I did not anticipate 
 the other obstacles, which were to retard completion of the work to such an extent.''',
                       speaker='Engels', yx=(73, 26), on_level='overworld')
-other_test = DialogItem(sprite=35, text="got this far", speaker='Marie', yx=(73, 26), on_level='overworld')
-BrokenDoor = DialogItem(sprite=33, text='Who is it?', dialog_opts={"Me": test_dia, "You": other_test}, speaker='Dick Allcocks from Man Island', yx=(73, 27), on_level='overworld')
+other_test = DialogItem(sprite=456, text="got this far", speaker='Marie', yx=(73, 26), on_level='overworld')
+BrokenDoor = DialogItem(sprite=345, text='Who is it?', dialog_opts={"Me": test_dia, "You": other_test}, speaker='Dick Allcocks from Man Island', yx=(73, 27), on_level='overworld')
 BrDo2 = DialogItem(sprite=33,
                    dialog_opts={"What this?": BrokenDoor, "Why that?": BrokenDoor, "Who there?": BrokenDoor, "When it?": BrokenDoor},
                    speaker='Thine Momther', yx=(73, 27), on_level='overworld')
@@ -389,9 +392,10 @@ class Game(arcade.Window):
                     arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map]['Sprite'][cur_pos].sprite])
                 if raw_maps[current_map]['Fore'][cur_pos]:
                     arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map]['Fore'][cur_pos]])
+                arcade.draw_rectangle_filled(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, (0, 0, 0, self._mouse_y))
 
     def add_sprites(self):
-        raw_maps[current_map]['Sprite'][:] = raw_maps[current_map]['Sprite Copy']
+        np.copyto(raw_maps[current_map]['Sprite'], raw_maps[current_map]['Sprite Copy'])
         for actor in self.actor_list:
             raw_maps[current_map]['Sprite'][actor.y, actor.x] = actor
         raw_maps[current_map]['Sprite'][self.p.y, self.p.x] = self.p
@@ -633,6 +637,9 @@ class Game(arcade.Window):
             else:
                 self.switch_state('Inventory')
                 self.inventory_screen = 3
+
+    def on_mouse_press(self, x: float, y: float, dx: float, dy: float):
+        print(x, y)
 
     def update(self, delta_time: float):
         start_time = timeit.default_timer()

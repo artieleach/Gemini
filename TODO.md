@@ -12,6 +12,7 @@
 * dynamic climate
 * levels
 * audio
+* combine mid and back map layers?
 
 abstract inventory lists?
 
