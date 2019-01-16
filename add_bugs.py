@@ -15,7 +15,7 @@ sc = SCREEN_WIDTH, SCREEN_HEIGHT = (WIDTH * COLS, HEIGHT * ROWS)
 wait_time = 0.01
 f_maps = {}
 
-current_map = 'overworld'
+current_map = 'test'
 raw_maps = {}
 mappos = {}
 loc_array = {}
@@ -51,11 +51,6 @@ for img in img_dir:
         small = Image.open('./Images/{}'.format(img))
         bigger = small.resize((small.size[0]*8, small.size[1]*8))
         bigger.save('./Images/64x64{}'.format(img.split('8x8')[1]), 'PNG')
-        if 'Tile' in img:
-            for i in range((small.size[0]-1) // 8):
-                for j in range((small.size[1]-1) // 8):
-                    tile_to_check = small.crop(box=(i*8, j*8, (i+1)*8, (j+1)*8))
-                    # istransparent.append(00 in tile_to_check.tobytes())
     else:
         img_name = img.split('.')[0]
         cur_img = Image.open('./Images/{}'.format(img))
@@ -82,23 +77,14 @@ for file in map_dir:  # Some layers need copies, and i figure having backups can
             for tile in layer.tiles:
                 map_data.append(tile.gid)
             if len(map_file.layers) > 1:
-                # add some code here to make a single map array with tuples instead of distinct arrays
                     raw_maps[file_name][int(layer.name)] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
 
             else:
                 raw_maps[file_name] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
+        print(file)
         if map_file.properties[0].value:  # checks if "space_map" is True, which allows for some consistency in structure
-            for arr in raw_maps[file_name]:
-                for lis_pos, lis in enumerate(raw_maps[file_name][arr]):
-                    for item_pos, item in enumerate(lis):
-                        try:
-                            new_arr[item_pos + (lis_pos * raw_maps[file_name][0].shape[1])].append(item)
-                        except IndexError:
-                            new_arr.append([])
-                            new_arr[item_pos + (lis_pos * raw_maps[file_name][0].shape[1])].append(item)
-            f_maps[file_name] = new_arr
+            f_maps[file_name] = list(zip(raw_maps[file_name][0], raw_maps[file_name][1], raw_maps[file_name][2], raw_maps[file_name][3]))
         else:
-            print(file_name)
             f_maps[file_name] = raw_maps[file_name].flatten().tolist()
 
 for item in f_maps:
@@ -379,7 +365,7 @@ class Game(arcade.Window):
         self.cur_item = None
         self.cur_text = None
         self.p = Player()
-        self.switch_state(new_state='Walking', new_map='overworld')
+        self.switch_state(new_state='Walking', new_map=current_map)
         self.actor1 = Actor(yx=(61, 26), name='Goast', sprite=909, disposition='Friendly', target_distance=1)
         self.actor2 = Actor(yx=(71, 26), name='Victor', sprite=1781, disposition='Aggressive', target_distance=6)
         self.actor_list = [self.actor1, self.actor2, BrDo2, test_dia]
@@ -391,20 +377,16 @@ class Game(arcade.Window):
                            'Floating Right': None, 'Right Arm': None, 'Right Weapon': None, 'Right Ring One': None, 'Right Ring Two': None}
 
     def draw_base(self):
-        """draw the main level, including the four key layers: Background, Midground, Sprites, and Foreground, in that order."""
+        """draw the main level, including the four key layers: Background : 1, Midground : 2, Sprites, and Foreground : 3, in that order."""
         arcade.start_render()
         for row in range(ROWS):
-            for col in range(COLS+1):
-                cur_pos = row + self.p.y - 4, col + self.p.x - 8  # 4 is ROWS // 2, 8 is COLS // 2
-                if raw_maps[current_map][1][cur_pos]:
-                    arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map][1][cur_pos]])
-                if raw_maps[current_map][2][cur_pos]:
-                    arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map][2][cur_pos]])
-                if raw_maps[current_map]['Sprite'][cur_pos]:
-                    arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map]['Sprite'][cur_pos].sprite])
-                if raw_maps[current_map][3][cur_pos]:
-                    arcade.draw_texture_rectangle(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, tile_set[raw_maps[current_map][3][cur_pos]])
-                arcade.draw_rectangle_filled(HEIGHT * col, WIDTH * row + 32, WIDTH, HEIGHT, (0, 0, 0, self._mouse_y))
+            tile_width = WIDTH * row + 32
+            for col in range(COLS):
+                cur_tile = f_maps[current_map][(row + self.p.y - 4) * 16 + (col + self.p.x - 8)]
+                tile_height = HEIGHT * col + 32
+                for tile_layer in cur_tile:
+                    if tile_layer:
+                        arcade.draw_texture_rectangle(tile_height, tile_width, WIDTH, HEIGHT, tile_set[tile_layer])
 
     def add_sprites(self):
         np.copyto(raw_maps[current_map]['Sprite'], raw_maps[current_map]['Sprite Copy'])
@@ -525,6 +507,8 @@ class Game(arcade.Window):
             self.gen_text(opts=options_menu, yx=(6.5, 2))
 
     def gen_sub_menu(self):
+        '''for cur_pos, cur_tile in enumerate(f_maps['submenu']):
+            self.gen_lone_tile(cur_tile, (10 + cur_pos % 4, 2.5 + cur_pos // 4))'''
         for x, row in enumerate(raw_maps['submenu']):
             for y, col in enumerate(row):
                 self.gen_tile_array(raw_maps['submenu'], (x, y), yx=(10, 2.5))
@@ -659,19 +643,19 @@ class Game(arcade.Window):
             self.cur_time = time.process_time()
             if self.cur_time - self.last_input_time > 0.05:
                 if any(key in movement_keys['N'] for key in self.pressed_keys):
-                    if raw_maps[current_map][0][self.p.y + 1, self.p.x] == 0:
+                    # if raw_maps[current_map][0][self.p.y + 1, self.p.x] == 0:
                         self.p.y += 1
                         self.game_step()
                 if any(key in movement_keys['S'] for key in self.pressed_keys):
-                    if raw_maps[current_map][0][self.p.y - 1, self.p.x] == 0:
+                    # if raw_maps[current_map][0][self.p.y - 1, self.p.x] == 0:
                         self.p.y -= 1
                         self.game_step()
                 if any(key in movement_keys['E'] for key in self.pressed_keys):
-                    if raw_maps[current_map][0][self.p.y, self.p.x + 1] == 0:
+                    # if raw_maps[current_map][0][self.p.y, self.p.x + 1] == 0:
                         self.p.x += 1
                         self.game_step()
                 if any(key in movement_keys['W'] for key in self.pressed_keys):
-                    if raw_maps[current_map][0][self.p.y, self.p.x - 1] == 0:
+                    # if raw_maps[current_map][0][self.p.y, self.p.x - 1] == 0:
                         self.p.x -= 1
                         self.game_step()
                 if any(key in movement_keys['NE'] for key in self.pressed_keys):
