@@ -8,20 +8,18 @@ import time
 import io
 from PIL import Image
 
-
 rc = ROWS, COLS = (9, 16)
 wh = WIDTH, HEIGHT = (64, 64)
 sc = SCREEN_WIDTH, SCREEN_HEIGHT = (WIDTH * COLS, HEIGHT * ROWS)
-wait_time = 0.01
-f_maps = {}
 
+
+list_maps = {}
+array_maps = {}
 current_map = 'test'
-raw_maps = {}
-mappos = {}
 loc_array = {}
 options_menu = ['Settings', 'Gameplay', 'Exit']
 
-map_dir = [map_file for map_file in os.listdir('./Maps') if os.path.isfile(os.path.join('./Maps', map_file))]
+map_dir = [map_file for map_file in [map_file for map_file in os.listdir('./Maps') if os.path.isfile(os.path.join('./Maps', map_file))] if map_file.endswith('.tmx')]
 img_dir = [img_file for img_file in os.listdir('./Images') if os.path.isfile(os.path.join('./Images', img_file))]
 
 char_width = {' ': 24, '!': 16, '"': 32, '#': 48, '$': 32, '%': 32, '&': 48, "'": 16, '(': 24, ')': 24, '*': 32, '+': 32, ',': 16, '-': 32, '.': 16, '/': 32,
@@ -57,40 +55,19 @@ for img in img_dir:
         loc_array[img_name] = [[j, i, WIDTH, HEIGHT] for i in range(0, cur_img.size[1], WIDTH) for j in range(0, cur_img.size[0], HEIGHT)]
         cur_img.close()
 
-try:
-    tile_set = arcade.draw_commands.load_textures('./Images/64x64Tile.png', loc_array['Tile'])
-    font = arcade.draw_commands.load_textures('./Images/64x64Font.png', loc_array['Font'])
-    tile_set.insert(0, tile_set[-1])
-except KeyError:
-    raise Exception('Damn it Artie you didnt fix the tile problem. \n'
-                    'Anyway, run this again and it should work, it was '
-                    'trying to grab an image before it was finished rendering.')
+tile_set = arcade.draw_commands.load_textures('./Images/64x64Tile.png', loc_array['Tile'])
+tile_set.insert(0, tile_set[-1])
 
-for file in map_dir:  # Some layers need copies, and i figure having backups cant hurt
-    if 'tsx' not in file:
-        map_file = tmx.TileMap.load('./Maps/{}'.format(file))
-        file_name = file.split('.')[0]
-        raw_maps[file_name] = {}
-        new_arr = []
-        for layer in map_file.layers:
-            map_data = []
-            for tile in layer.tiles:
-                map_data.append(tile.gid)
-            if len(map_file.layers) > 1:
-                    raw_maps[file_name][int(layer.name)] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
+font = arcade.draw_commands.load_textures('./Images/64x64Font.png', loc_array['Font'])
 
-            else:
-                raw_maps[file_name] = np.flip(np.array(map_data, dtype=int).reshape((map_file.height, map_file.width)), 0)
-        print(file)
-        if map_file.properties[0].value:  # checks if "space_map" is True, which allows for some consistency in structure
-            f_maps[file_name] = list(zip(raw_maps[file_name][0], raw_maps[file_name][1], raw_maps[file_name][2], raw_maps[file_name][3]))
-        else:
-            f_maps[file_name] = raw_maps[file_name].flatten().tolist()
 
-for item in f_maps:
-    print(item, f_maps[item])
+for map_name in map_dir:
+    map_file = tmx.TileMap.load('./Maps/{}'.format(map_name))
+    list_maps[map_name.split('.')[0]] = list(zip(*[[tile.gid for tile in layer.tiles] for layer in map_file.layers_list]))
+    array_maps[map_name.split('.')[0]] = [np.array([tile.gid for tile in layer.tiles]).reshape(map_file.height, map_file.width) for layer in map_file.layers_list]
 
-def astar(start, goal, array=raw_maps[current_map][0]):
+
+def astar(start, goal, array=array_map[current_map][0]):
     """implementation of astar algorithm, neighbors can be
     modified to allow for different movement sets."""
 
@@ -98,7 +75,6 @@ def astar(start, goal, array=raw_maps[current_map][0]):
         return (b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2
 
     neighbors = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-
     close_set = set()
     came_from = {}
     gscore = {start: 0}
@@ -108,16 +84,13 @@ def astar(start, goal, array=raw_maps[current_map][0]):
     heapq.heappush(oheap, (fscore[start], start))
 
     while oheap:
-
         current = heapq.heappop(oheap)[1]
-
         if current == goal:
             data = []
             while current in came_from:
                 data.append(current)
                 current = came_from[current]
             return data
-
         close_set.add(current)
         for pos_n_1, pos_n_2 in neighbors:
             neighbor = current[0] + pos_n_1, current[1] + pos_n_2
@@ -169,15 +142,15 @@ class Actor(Entity):
 
     def move_me(self, goal):
         if (abs(self.y-goal[0]) + abs(self.x-goal[1])) > self.target_distance:  # i only want to calculate the path tree if need be
-            path = astar((self.y, self.x), goal, raw_maps[current_map][0])
+            path = astar((self.y, self.x), goal, array_map[current_map][0])
             if path:
                 self.y, self.x = path[-1]
         elif self.y == goal[0] and self.x == goal[1]:  # lazy implentation of moving AI out of the way, needs to be rewritten for different dispositions
-            if raw_maps[current_map][0][self.y + 1, self.x]:
+            if array_map[current_map][0][self.y + 1, self.x]:
                 self.y, self.x = self.y + 1, self.x
-            if raw_maps[current_map][0][self.y - 1, self.x]:
+            if array_map[current_map][0][self.y - 1, self.x]:
                 self.y, self.x = self.y - 1, self.x
-            if raw_maps[current_map][0][self.y, self.x + 1]:
+            if array_map[current_map][0][self.y, self.x + 1]:
                 self.y, self.x = self.y, self.x + 1
             else:
                 self.y, self.x = self.y, self.x - 1
@@ -389,10 +362,10 @@ class Game(arcade.Window):
                         arcade.draw_texture_rectangle(tile_height, tile_width, WIDTH, HEIGHT, tile_set[tile_layer])
 
     def add_sprites(self):
-        np.copyto(raw_maps[current_map]['Sprite'], raw_maps[current_map]['Sprite Copy'])
+        np.copyto(array_map[current_map]['Sprite'], array_map[current_map]['Sprite Copy'])
         for actor in self.actor_list:
-            raw_maps[current_map]['Sprite'][actor.y, actor.x] = actor
-        raw_maps[current_map]['Sprite'][self.p.y, self.p.x] = self.p
+            array_map[current_map]['Sprite'][actor.y, actor.x] = actor
+        array_map[current_map]['Sprite'][self.p.y, self.p.x] = self.p
 
     def on_draw(self):
         draw_start_time = timeit.default_timer()
@@ -401,13 +374,13 @@ class Game(arcade.Window):
         if self.p.state is 'Talking':
             for row in range(ROWS):
                 for col in range(COLS):
-                    self.gen_tile_array(raw_maps['dialog'], r_c=(row, col), yx=(0, 0.5))
+                    self.gen_tile_array(array_map['dialog'], r_c=(row, col), yx=(0, 0.5))
             self.gen_text(text=self.cur_text.text, speaker=self.cur_text.speaker, opts=self.cur_text.dialog_opts)
 
         if self.p.state is 'Inventory':
             for row in range(ROWS):
                 for col in range(COLS):
-                    self.gen_tile_array(raw_maps['inventory'][self.inventory_screen], r_c=(row, col))
+                    self.gen_tile_array(array_map['inventory'][self.inventory_screen], r_c=(row, col))
             self.gen_inv()
 
         if self.p.state is 'Walking':
@@ -428,17 +401,17 @@ class Game(arcade.Window):
         self.opt_highlighted = False
         if new_state is 'Talking':
             if self.cur_text.speaker:
-                raw_maps['dialog'][3] = [cur_tile for cur_row in [[0], [1564], [1565] * ((len(self.cur_text.speaker)) // 2 + 1), [1566], [0] * 15] for cur_tile in cur_row][:16]
+                array_map['dialog'][3] = [cur_tile for cur_row in [[0], [1564], [1565] * ((len(self.cur_text.speaker)) // 2 + 1), [1566], [0] * 15] for cur_tile in cur_row][:16]
             else:
-                raw_maps['dialog'][3] = [0] * 16
+                array_map['dialog'][3] = [0] * 16
         if new_state is 'Walking':
             pass
         if new_state is 'Inventory':
             self.inventory_screen = 0
         self.p.state = new_state
         if new_map:
-            raw_maps[new_map]['Sprite'] = np.zeros(shape=raw_maps[new_map][1].shape, dtype=Entity)
-            raw_maps[new_map]['Sprite Copy'] = np.zeros(shape=raw_maps[new_map][1].shape, dtype=Entity)
+            array_map[new_map]['Sprite'] = np.zeros(shape=array_map[new_map][1].shape, dtype=Entity)
+            array_map[new_map]['Sprite Copy'] = array_map[new_map]['Sprite'][:]
 
     def cursor(self, list_locs, yx):
         y, x = yx
@@ -509,9 +482,9 @@ class Game(arcade.Window):
     def gen_sub_menu(self):
         '''for cur_pos, cur_tile in enumerate(f_maps['submenu']):
             self.gen_lone_tile(cur_tile, (10 + cur_pos % 4, 2.5 + cur_pos // 4))'''
-        for x, row in enumerate(raw_maps['submenu']):
+        for x, row in enumerate(array_map['submenu']):
             for y, col in enumerate(row):
-                self.gen_tile_array(raw_maps['submenu'], (x, y), yx=(10, 2.5))
+                self.gen_tile_array(array_map['submenu'], (x, y), yx=(10, 2.5))
         self.gen_text(opts=self.cur_item.get_actions(), yx=(6, 11))
 
     @staticmethod
@@ -598,8 +571,8 @@ class Game(arcade.Window):
             if key in movement_keys['Inv']:
                 self.switch_state('Inventory')
             if key in movement_keys['Context']:
-                if type(raw_maps[current_map]['Sprite'][self.p.y + 1, self.p.x]) is DialogItem:
-                    self.cur_text = raw_maps[current_map]['Sprite'][self.p.y + 1, self.p.x]
+                if type(array_map[current_map]['Sprite'][self.p.y + 1, self.p.x]) is DialogItem:
+                    self.cur_text = array_map[current_map]['Sprite'][self.p.y + 1, self.p.x]
                     self.switch_state('Talking')
 
         elif self.p.state is 'Talking':
@@ -615,10 +588,10 @@ class Game(arcade.Window):
                     self.cur_opt[1] += 1
             if key in movement_keys['Context']:
                 if self.cur_text.dialog_opts:
-                    raw_maps[current_map]['Sprite'][self.p.y + 1, self.p.x] = self.cur_text.dialog_opts[list(self.cur_text.dialog_opts)[sum(self.cur_opt)]]
+                    array_map[current_map]['Sprite'][self.p.y + 1, self.p.x] = self.cur_text.dialog_opts[list(self.cur_text.dialog_opts)[sum(self.cur_opt)]]
                     self.whatsnextifier(choice=self.cur_text.dialog_opts[list(self.cur_text.dialog_opts)[sum(self.cur_opt)]])
                     self.switch_state('Talking')
-                    print(raw_maps[current_map]['Sprite'][self.p.y + 1, self.p.x])
+                    print(array_map[current_map]['Sprite'][self.p.y + 1, self.p.x])
                 elif len(self.cur_text.text) > 3:
                     if len(self.cur_text.text) - 2 > self.cur_opt[1]:
                         self.cur_opt[1] += 1
@@ -643,38 +616,38 @@ class Game(arcade.Window):
             self.cur_time = time.process_time()
             if self.cur_time - self.last_input_time > 0.05:
                 if any(key in movement_keys['N'] for key in self.pressed_keys):
-                    # if raw_maps[current_map][0][self.p.y + 1, self.p.x] == 0:
+                    # if array_map[current_map][0][self.p.y + 1, self.p.x] == 0:
                         self.p.y += 1
                         self.game_step()
                 if any(key in movement_keys['S'] for key in self.pressed_keys):
-                    # if raw_maps[current_map][0][self.p.y - 1, self.p.x] == 0:
+                    # if array_map[current_map][0][self.p.y - 1, self.p.x] == 0:
                         self.p.y -= 1
                         self.game_step()
                 if any(key in movement_keys['E'] for key in self.pressed_keys):
-                    # if raw_maps[current_map][0][self.p.y, self.p.x + 1] == 0:
+                    # if array_map[current_map][0][self.p.y, self.p.x + 1] == 0:
                         self.p.x += 1
                         self.game_step()
                 if any(key in movement_keys['W'] for key in self.pressed_keys):
-                    # if raw_maps[current_map][0][self.p.y, self.p.x - 1] == 0:
+                    # if array_map[current_map][0][self.p.y, self.p.x - 1] == 0:
                         self.p.x -= 1
                         self.game_step()
                 if any(key in movement_keys['NE'] for key in self.pressed_keys):
-                    if raw_maps[current_map][0][self.p.y + 1, self.p.x + 1] == 0:
+                    if array_map[current_map][0][self.p.y + 1, self.p.x + 1] == 0:
                         self.p.x += 1
                         self.p.y += 1
                         self.game_step()
                 if any(key in movement_keys['NW'] for key in self.pressed_keys):
-                    if raw_maps[current_map][0][self.p.y - 1, self.p.x + 1] == 0:
+                    if array_map[current_map][0][self.p.y - 1, self.p.x + 1] == 0:
                         self.p.x -= 1
                         self.p.y += 1
                         self.game_step()
                 if any(key in movement_keys['SE'] for key in self.pressed_keys):
-                    if raw_maps[current_map][0][self.p.y + 1, self.p.x - 1] == 0:
+                    if array_map[current_map][0][self.p.y + 1, self.p.x - 1] == 0:
                         self.p.x += 1
                         self.p.y -= 1
                         self.game_step()
                 if any(key in movement_keys['SW'] for key in self.pressed_keys):
-                    if raw_maps[current_map][0][self.p.y - 1, self.p.x - 1] == 0:
+                    if array_map[current_map][0][self.p.y - 1, self.p.x - 1] == 0:
                         self.p.x -= 1
                         self.p.y -= 1
                         self.game_step()
@@ -697,8 +670,8 @@ class Game(arcade.Window):
             self.p.inventory.remove(item)
 
     def whatsnextifier(self, choice):
-        raw_maps[current_map]['Sprite'][self.p.y+1, self.p.x] = choice
-        self.cur_text = raw_maps[current_map]['Sprite'][self.p.y + 1, self.p.x]
+        array_map[current_map]['Sprite'][self.p.y+1, self.p.x] = choice
+        self.cur_text = array_map[current_map]['Sprite'][self.p.y + 1, self.p.x]
 
     def game_step(self):
             self.add_sprites()
@@ -722,20 +695,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

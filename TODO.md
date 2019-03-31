@@ -16,5 +16,9 @@
 
 abstract inventory lists?
 
+whats up future artie, you just finished implementing shading th the cellular automata thing.
+dont worry about why, it just seemed like fun. 
+
 
 bug list:
+
